@@ -1,0 +1,43 @@
+# Source files
+src/
+tests/
+
+# Development files
+*.test.ts
+*.spec.ts
+jest.config.js
+.eslintrc.js
+tsconfig.json
+
+# Coverage reports
+coverage/
+
+# Development dependencies
+node_modules/
+
+# IDE files
+.vscode/
+.idea/
+
+# Git files
+.git/
+.gitignore
+
+# CI files
+.github/
+
+# Documentation (except README)
+docs/
+*.md
+!README.md
+
+# Environment files
+.env*
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/

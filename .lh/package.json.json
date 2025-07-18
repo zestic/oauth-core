@@ -1,0 +1,38 @@
+{
+    "sourceFile": "package.json",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 5,
+            "patches": [
+                {
+                    "date": 1752828894420,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1752828943345,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -35,8 +35,9 @@\n     \"@typescript-eslint/eslint-plugin\": \"^7.1.1\",\n     \"@typescript-eslint/parser\": \"^7.1.1\",\n     \"eslint\": \"^8.57.0\",\n     \"jest\": \"^29.7.0\",\n+    \"jest-util\": \"^29.7.0\",\n     \"ts-jest\": \"^29.1.2\",\n     \"typescript\": \"^5.4.2\"\n   },\n   \"repository\": {\n"
+                },
+                {
+                    "date": 1752829148887,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -29,14 +29,16 @@\n     \"dist\",\n     \"README.md\"\n   ],\n   \"devDependencies\": {\n+    \"@jest/globals\": \"^29.7.0\",\n     \"@types/jest\": \"^29.5.12\",\n     \"@types/node\": \"^20.11.24\",\n     \"@typescript-eslint/eslint-plugin\": \"^7.1.1\",\n     \"@typescript-eslint/parser\": \"^7.1.1\",\n     \"eslint\": \"^8.57.0\",\n     \"jest\": \"^29.7.0\",\n+    \"jest-environment-node\": \"^29.7.0\",\n     \"jest-util\": \"^29.7.0\",\n     \"ts-jest\": \"^29.1.2\",\n     \"typescript\": \"^5.4.2\"\n   },\n"
+                },
+                {
+                    "date": 1752834302183,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -9,12 +9,16 @@\n     \"build:watch\": \"tsc --watch\",\n     \"test\": \"jest\",\n     \"test:watch\": \"jest --watch\",\n     \"test:coverage\": \"jest --coverage\",\n-    \"lint\": \"eslint src/**/*.ts\",\n-    \"lint:fix\": \"eslint src/**/*.ts --fix\",\n-    \"clean\": \"rm -rf dist\",\n-    \"prepublishOnly\": \"yarn clean && yarn build\"\n+    \"test:ci\": \"jest --coverage --watchAll=false --passWithNoTests\",\n+    \"lint\": \"eslint src/**/*.ts tests/**/*.ts\",\n+    \"lint:fix\": \"eslint src/**/*.ts tests/**/*.ts --fix\",\n+    \"lint:check\": \"eslint src/**/*.ts tests/**/*.ts --max-warnings 0\",\n+    \"type-check\": \"tsc --noEmit\",\n+    \"clean\": \"rm -rf dist coverage\",\n+    \"prepublishOnly\": \"yarn clean && yarn build\",\n+    \"ci\": \"yarn lint:check && yarn type-check && yarn test:ci && yarn build\"\n   },\n   \"keywords\": [\n     \"oauth\",\n     \"authentication\",\n"
+                },
+                {
+                    "date": 1752834778889,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -9,9 +9,9 @@\n     \"build:watch\": \"tsc --watch\",\n     \"test\": \"jest\",\n     \"test:watch\": \"jest --watch\",\n     \"test:coverage\": \"jest --coverage\",\n-    \"test:ci\": \"jest --coverage --watchAll=false --passWithNoTests\",\n+    \"test:ci\": \"jest --coverage --watchAll=false --passWithNoTests --testPathIgnorePatterns=tests/\",\n     \"lint\": \"eslint src/**/*.ts tests/**/*.ts\",\n     \"lint:fix\": \"eslint src/**/*.ts tests/**/*.ts --fix\",\n     \"lint:check\": \"eslint src/**/*.ts tests/**/*.ts --max-warnings 0\",\n     \"type-check\": \"tsc --noEmit\",\n@@ -34,9 +34,9 @@\n     \"README.md\"\n   ],\n   \"devDependencies\": {\n     \"@jest/globals\": \"^29.7.0\",\n-    \"@types/jest\": \"^29.5.12\",\n+    \"@types/jest\": \"^30.0.0\",\n     \"@types/node\": \"^20.11.24\",\n     \"@typescript-eslint/eslint-plugin\": \"^7.1.1\",\n     \"@typescript-eslint/parser\": \"^7.1.1\",\n     \"eslint\": \"^8.57.0\",\n"
+                },
+                {
+                    "date": 1752834796011,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -10,11 +10,11 @@\n     \"test\": \"jest\",\n     \"test:watch\": \"jest --watch\",\n     \"test:coverage\": \"jest --coverage\",\n     \"test:ci\": \"jest --coverage --watchAll=false --passWithNoTests --testPathIgnorePatterns=tests/\",\n-    \"lint\": \"eslint src/**/*.ts tests/**/*.ts\",\n-    \"lint:fix\": \"eslint src/**/*.ts tests/**/*.ts --fix\",\n-    \"lint:check\": \"eslint src/**/*.ts tests/**/*.ts --max-warnings 0\",\n+    \"lint\": \"eslint src/**/*.ts\",\n+    \"lint:fix\": \"eslint src/**/*.ts --fix\",\n+    \"lint:check\": \"eslint src/**/*.ts --max-warnings 0\",\n     \"type-check\": \"tsc --noEmit\",\n     \"clean\": \"rm -rf dist coverage\",\n     \"prepublishOnly\": \"yarn clean && yarn build\",\n     \"ci\": \"yarn lint:check && yarn type-check && yarn test:ci && yarn build\"\n"
+                }
+            ],
+            "date": 1752828894420,
+            "name": "Commit-0",
+            "content": "{\n  \"name\": \"@zestic/oauth-core\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Framework-agnostic OAuth authentication library with support for multiple OAuth flows\",\n  \"main\": \"dist/index.js\",\n  \"types\": \"dist/index.d.ts\",\n  \"scripts\": {\n    \"build\": \"tsc\",\n    \"build:watch\": \"tsc --watch\",\n    \"test\": \"jest\",\n    \"test:watch\": \"jest --watch\",\n    \"test:coverage\": \"jest --coverage\",\n    \"lint\": \"eslint src/**/*.ts\",\n    \"lint:fix\": \"eslint src/**/*.ts --fix\",\n    \"clean\": \"rm -rf dist\",\n    \"prepublishOnly\": \"yarn clean && yarn build\"\n  },\n  \"keywords\": [\n    \"oauth\",\n    \"authentication\",\n    \"pkce\",\n    \"authorization-code\",\n    \"magic-link\",\n    \"typescript\"\n  ],\n  \"author\": \"Zestic\",\n  \"license\": \"MIT\",\n  \"files\": [\n    \"dist\",\n    \"README.md\"\n  ],\n  \"devDependencies\": {\n    \"@types/jest\": \"^29.5.12\",\n    \"@types/node\": \"^20.11.24\",\n    \"@typescript-eslint/eslint-plugin\": \"^7.1.1\",\n    \"@typescript-eslint/parser\": \"^7.1.1\",\n    \"eslint\": \"^8.57.0\",\n    \"jest\": \"^29.7.0\",\n    \"ts-jest\": \"^29.1.2\",\n    \"typescript\": \"^5.4.2\"\n  },\n  \"repository\": {\n    \"type\": \"git\",\n    \"url\": \"https://github.com/zestic/oauth-core.git\"\n  },\n  \"bugs\": {\n    \"url\": \"https://github.com/zestic/oauth-core/issues\"\n  },\n  \"homepage\": \"https://github.com/zestic/oauth-core#readme\",\n  \"packageManager\": \"yarn@4.1.1+sha512.ec40d0639bb307441b945d9467139cbb88d14394baac760b52eca038b330d16542d66fef61574271534ace5a200518dabf3b53a85f1f9e4bfa37141b538a9590\"\n}\n"
+        }
+    ]
+}

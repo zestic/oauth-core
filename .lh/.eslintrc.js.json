@@ -1,0 +1,22 @@
+{
+    "sourceFile": ".eslintrc.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 1,
+            "patches": [
+                {
+                    "date": 1752834466538,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1752834502531,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -0,0 +1,32 @@\n+module.exports = {\n+  parser: '@typescript-eslint/parser',\n+  parserOptions: {\n+    ecmaVersion: 2020,\n+    sourceType: 'module',\n+  },\n+  plugins: ['@typescript-eslint'],\n+  extends: [\n+    'eslint:recommended',\n+  ],\n+  rules: {\n+    'no-unused-vars': 'off',\n+    '@typescript-eslint/no-unused-vars': 'error',\n+    '@typescript-eslint/no-explicit-any': 'warn',\n+    'prefer-const': 'error',\n+    'no-var': 'error',\n+    'no-console': 'off',\n+  },\n+  env: {\n+    node: true,\n+    jest: true,\n+    es2020: true,\n+  },\n+  ignorePatterns: [\n+    'dist/',\n+    'coverage/',\n+    'node_modules/',\n+    '*.js',\n+    '!.eslintrc.js',\n+    '!jest.config.js'\n+  ],\n+};\n"
+                }
+            ],
+            "date": 1752834466538,
+            "name": "Commit-0",
+            "content": "module.exports = {\n  parser: '@typescript-eslint/parser',\n  parserOptions: {\n    ecmaVersion: 2020,\n    sourceType: 'module',\n    project: './tsconfig.json',\n  },\n  plugins: ['@typescript-eslint'],\n  extends: [\n    'eslint:recommended',\n    '@typescript-eslint/recommended',\n  ],\n  rules: {\n    '@typescript-eslint/no-unused-vars': 'error',\n    '@typescript-eslint/no-explicit-any': 'warn',\n    '@typescript-eslint/explicit-function-return-type': 'off',\n    'prefer-const': 'error',\n    'no-var': 'error',\n  },\n  env: {\n    node: true,\n    jest: true,\n  },\n  ignorePatterns: [\n    'dist/',\n    'coverage/',\n    'node_modules/',\n    '*.js',\n    '!.eslintrc.js',\n    '!jest.config.js'\n  ],\n};\n"
+        }
+    ]
+}
