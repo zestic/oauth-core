@@ -62,7 +62,10 @@ describe('OAuthCore', () => {
     it('should handle authorization code flow', async () => {
       // Setup PKCE data in storage
       await mockAdapters.storage.setItem('pkce_code_verifier', 'test-code-verifier');
-      
+      // Setup state in storage for validation
+      await mockAdapters.storage.setItem('oauth_state', 'test-state');
+      await mockAdapters.storage.setItem('oauth_state_expiry', (Date.now() + 60000).toString());
+
       const params = new URLSearchParams({
         code: 'test-auth-code',
         state: 'test-state',

@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": ["jest"],
+    "types": ["jest", "node"],
     "lib": ["ES2020", "DOM"],
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
@@ -10,11 +10,13 @@
     "exactOptionalPropertyTypes": false,
     "noImplicitOverride": false,
     "noPropertyAccessFromIndexSignature": false,
-    "noUncheckedIndexedAccess": false
+    "noUncheckedIndexedAccess": false,
+    "noEmit": true
   },
   "include": [
     "src/**/*",
-    "tests/**/*"
+    "tests/**/*",
+    "tests/jest.d.ts"
   ],
   "exclude": [
     "node_modules",
