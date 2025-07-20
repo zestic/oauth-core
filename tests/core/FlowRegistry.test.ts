@@ -1,6 +1,6 @@
 import { FlowRegistry } from '../../src/core/FlowRegistry';
 import { FlowHandler } from '../../src/types/FlowTypes';
-import { OAuthError } from '../../src/types/OAuthTypes';
+import { OAuthError, OAuthResult } from '../../src/types/OAuthTypes';
 import { createMockConfig } from '../mocks/adapters';
 
 // Mock flow handler for testing
@@ -14,8 +14,8 @@ class MockFlowHandler implements FlowHandler {
     return params.has(this.name);
   }
 
-  async handle(): Promise<any> {
-    return { success: true, flow: this.name };
+  async handle(): Promise<OAuthResult> {
+    return { success: true, accessToken: 'test-token' };
   }
 }
 
