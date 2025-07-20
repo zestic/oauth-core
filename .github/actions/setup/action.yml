@@ -24,7 +24,7 @@ runs:
       uses: actions/cache/restore@v4
       with:
         path: |
-          **/node_modules
+          .yarn/cache
           .yarn/install-state.gz
         key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-${{ hashFiles('**/package.json', '!node_modules/**') }}
         restore-keys: |
@@ -41,6 +41,6 @@ runs:
       uses: actions/cache/save@v4
       with:
         path: |
-          **/node_modules
+          .yarn/cache
           .yarn/install-state.gz
         key: ${{ steps.yarn-cache.outputs.cache-primary-key }}
