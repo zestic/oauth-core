@@ -18,18 +18,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
-      - name: Enable Corepack
-        run: corepack enable
-        
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }} and dependencies
+        uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'yarn'
-          
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
         
       - name: Run tests
         run: yarn test --coverage

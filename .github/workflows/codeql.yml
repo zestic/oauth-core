@@ -31,17 +31,8 @@ jobs:
       with:
         languages: ${{ matrix.language }}
 
-    - name: Enable Corepack
-      run: corepack enable
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'yarn'
-
-    - name: Install dependencies
-      run: yarn install --frozen-lockfile
+    - name: Setup Node.js and dependencies
+      uses: ./.github/actions/setup
 
     - name: Build
       run: yarn build
