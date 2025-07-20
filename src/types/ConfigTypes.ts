@@ -2,7 +2,7 @@
  * Configuration-related types and interfaces
  */
 
-import { FlowHandler } from './OAuthTypes';
+import type { FlowHandler } from './FlowTypes';
 
 export interface OAuthEndpoints {
   authorization: string;

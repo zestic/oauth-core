@@ -148,9 +148,83 @@ describe('OAuthCore', () => {
       const state = await oauthCore.generateState();
 
       expect(state).toBe('mock-state');
-      
+
       const storedState = await mockAdapters.storage.getItem('oauth_state');
       expect(storedState).toBe('mock-state');
+    });
+  });
+
+  describe('generateAuthorizationUrl', () => {
+    it('should generate complete authorization URL with PKCE parameters', async () => {
+      const result = await oauthCore.generateAuthorizationUrl();
+
+      expect(result.state).toBe('mock-state');
+      expect(result.url).toContain(mockConfig.endpoints.authorization);
+      expect(result.url).toContain(`client_id=${mockConfig.clientId}`);
+      expect(result.url).toContain(`redirect_uri=${encodeURIComponent(mockConfig.redirectUri)}`);
+      expect(result.url).toContain('scope=read+write'); // URLSearchParams encodes spaces as +
+      expect(result.url).toContain(`state=mock-state`);
+      expect(result.url).toContain(`code_challenge=mock-code-challenge`);
+      expect(result.url).toContain(`code_challenge_method=S256`);
+      expect(result.url).toContain('response_type=code');
+    });
+
+    it('should include additional parameters in authorization URL', async () => {
+      const additionalParams = {
+        audience: 'https://api.example.com',
+        prompt: 'consent',
+        access_type: 'offline',
+      };
+
+      const result = await oauthCore.generateAuthorizationUrl(additionalParams);
+
+      expect(result.url).toContain('audience=https%3A%2F%2Fapi.example.com'); // URLSearchParams encodes / as %2F
+      expect(result.url).toContain('prompt=consent');
+      expect(result.url).toContain('access_type=offline');
+    });
+
+    it('should store PKCE parameters and state in storage', async () => {
+      await oauthCore.generateAuthorizationUrl();
+
+      // Verify PKCE challenge was stored with correct keys
+      const storedVerifier = await mockAdapters.storage.getItem('pkce_code_verifier');
+      const storedChallenge = await mockAdapters.storage.getItem('pkce_code_challenge');
+      const storedMethod = await mockAdapters.storage.getItem('pkce_code_challenge_method');
+      const storedState = await mockAdapters.storage.getItem('oauth_state');
+
+      expect(storedVerifier).toBe('mock-code-verifier');
+      expect(storedChallenge).toBe('mock-code-challenge');
+      expect(storedMethod).toBe('S256');
+      expect(storedState).toBe('mock-state');
+    });
+
+    it('should handle empty scopes array', async () => {
+      const configWithEmptyScopes = { ...mockConfig, scopes: [] };
+      const oauthCoreWithEmptyScopes = new OAuthCore(configWithEmptyScopes, mockAdapters);
+
+      const result = await oauthCoreWithEmptyScopes.generateAuthorizationUrl();
+
+      expect(result.url).toContain('scope=');
+      expect(result.url).not.toContain('scope=read%20write');
+    });
+
+    it('should handle single scope', async () => {
+      const configWithSingleScope = { ...mockConfig, scopes: ['read'] };
+      const oauthCoreWithSingleScope = new OAuthCore(configWithSingleScope, mockAdapters);
+
+      const result = await oauthCoreWithSingleScope.generateAuthorizationUrl();
+
+      expect(result.url).toContain('scope=read');
+    });
+
+    it('should handle special characters in parameters', async () => {
+      const additionalParams = {
+        custom_param: 'value with spaces & symbols!',
+      };
+
+      const result = await oauthCore.generateAuthorizationUrl(additionalParams);
+
+      expect(result.url).toContain('custom_param=value+with+spaces+%26+symbols%21'); // URLSearchParams encodes spaces as + and ! as %21
     });
   });
 

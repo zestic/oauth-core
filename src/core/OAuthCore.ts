@@ -115,6 +115,50 @@ export class OAuthCore {
   }
 
   /**
+   * Generate complete authorization URL with PKCE parameters
+   * This method handles all OAuth logic including PKCE generation and state management
+   */
+  async generateAuthorizationUrl(additionalParams?: Record<string, string>): Promise<{
+    url: string;
+    state: string;
+  }> {
+    try {
+      // Generate and store PKCE challenge
+      const pkceChallenge = await this.generatePKCEChallenge();
+
+      // Generate and store state
+      const state = await this.generateState();
+
+      // Build authorization URL parameters
+      const params = new URLSearchParams({
+        response_type: 'code',
+        client_id: this.config.clientId,
+        redirect_uri: this.config.redirectUri,
+        scope: this.config.scopes.join(' '),
+        state,
+        code_challenge: pkceChallenge.codeChallenge,
+        code_challenge_method: pkceChallenge.codeChallengeMethod,
+        ...additionalParams,
+      });
+
+      const url = `${this.config.endpoints.authorization}?${params.toString()}`;
+
+      console.log('[OAuthCore] Generated authorization URL with PKCE parameters');
+
+      return { url, state };
+
+    } catch (error) {
+      console.error('[OAuthCore] Failed to generate authorization URL:', ErrorHandler.formatError(error));
+
+      throw ErrorHandler.createError(
+        `Failed to generate authorization URL: ${error instanceof Error ? error.message : String(error)}`,
+        OAUTH_ERROR_CODES.MISSING_PKCE,
+        error instanceof Error ? error : undefined
+      );
+    }
+  }
+
+  /**
    * Get current access token
    */
   async getAccessToken(): Promise<string | null> {

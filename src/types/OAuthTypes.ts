@@ -2,6 +2,11 @@
  * Core OAuth interfaces and types
  */
 
+import type { FlowConfiguration } from './ConfigTypes';
+
+// Re-export for convenience
+export type { FlowConfiguration };
+
 export interface OAuthConfig {
   clientId: string;
   endpoints: {
@@ -58,22 +63,7 @@ export interface PKCEChallenge {
   codeVerifier: string;
 }
 
-export interface FlowConfiguration {
-  enabledFlows?: string[];
-  disabledFlows?: string[];
-  customFlows?: FlowHandler[];
-  defaultFlow?: string;
-  detectionStrategy?: 'auto' | 'priority' | 'explicit';
-}
-
-export interface FlowHandler {
-  readonly name: string;
-  readonly priority: number;
-  
-  canHandle(params: URLSearchParams, config: OAuthConfig): boolean;
-  handle(params: URLSearchParams, adapters: OAuthAdapters, config: OAuthConfig): Promise<OAuthResult>;
-  validate?(params: URLSearchParams, config: OAuthConfig): Promise<boolean>;
-}
+// FlowConfiguration and FlowHandler are defined in ConfigTypes.ts and FlowTypes.ts respectively
 
 export interface TokenExchangeRequest {
   grantType: string;
