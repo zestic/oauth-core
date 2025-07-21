@@ -19,28 +19,19 @@ runs:
       run: corepack enable
       shell: bash
 
-    - name: Restore dependencies
-      id: yarn-cache
-      uses: actions/cache/restore@v4
+    - name: Get yarn cache directory path
+      id: yarn-cache-dir-path
+      run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Restore yarn cache
+      uses: actions/cache@v4
       with:
-        path: |
-          .yarn/cache
-          .yarn/install-state.gz
-        key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-${{ hashFiles('**/package.json', '!node_modules/**') }}
+        path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
         restore-keys: |
-          ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
           ${{ runner.os }}-yarn-
 
     - name: Install dependencies
-      if: steps.yarn-cache.outputs.cache-hit != 'true'
       run: yarn install --immutable
       shell: bash
-
-    - name: Cache dependencies
-      if: steps.yarn-cache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        path: |
-          .yarn/cache
-          .yarn/install-state.gz
-        key: ${{ steps.yarn-cache.outputs.cache-primary-key }}
