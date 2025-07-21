@@ -3,7 +3,7 @@
 [![CI](https://github.com/zestic/oauth-core/workflows/CI/badge.svg)](https://github.com/zestic/oauth-core/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/zestic/oauth-core/branch/main/graph/badge.svg)](https://codecov.io/gh/zestic/oauth-core)
 [![npm version](https://badge.fury.io/js/%40zestic%2Foauth-core.svg)](https://badge.fury.io/js/%40zestic%2Foauth-core)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Framework-agnostic OAuth authentication library with support for multiple OAuth flows including authorization code flow, magic link authentication, and custom flows.
 
@@ -262,4 +262,4 @@ This project uses GitHub Actions for continuous integration:
 
 ## License
 
-MIT
+Apache 2.0
