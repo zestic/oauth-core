@@ -1,6 +1,6 @@
 # @zestic/oauth-core
 
-[![CI](https://github.com/zestic/oauth-core/workflows/CI/badge.svg)](https://github.com/zestic/oauth-core/actions/workflows/ci.yml)
+[![Test](https://github.com/zestic/oauth-core/workflows/Test/badge.svg)](https://github.com/zestic/oauth-core/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/zestic/oauth-core/branch/main/graph/badge.svg)](https://codecov.io/gh/zestic/oauth-core)
 [![npm version](https://badge.fury.io/js/%40zestic%2Foauth-core.svg)](https://badge.fury.io/js/%40zestic%2Foauth-core)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
