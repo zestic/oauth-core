@@ -2,3 +2,4 @@
 export * from './OAuthTypes';
 export * from './FlowTypes';
 export * from './ConfigTypes';
+export * from './ServiceTypes';

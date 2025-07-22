@@ -15,7 +15,8 @@ module.exports = {
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
-    '!src/**/index.ts'
+    '!src/**/index.ts',
+    '!src/graphql/example.ts' // Exclude example file from coverage
   ],
   coverageDirectory: 'coverage',
   coverageReporters: [
@@ -25,10 +26,10 @@ module.exports = {
   ],
   coverageThreshold: {
     global: {
-      branches: 45,
-      functions: 70,
-      lines: 70,
-      statements: 70
+      branches: 85,
+      functions: 90,
+      lines: 90,
+      statements: 90
     }
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
