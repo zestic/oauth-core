@@ -193,6 +193,23 @@ describe('StateValidator', () => {
 
       await expect(stateValidator.validateState('test-state')).rejects.toThrow(OAuthError);
     });
+
+    it('should handle non-Error objects in validateState', async () => {
+      await stateValidator.storeState('test-state');
+
+      // Mock storage to throw non-Error object
+      mockAdapters.storage.getItem = jest.fn().mockImplementation((key: string) => {
+        if (key === 'oauth_state_expiry') {
+          return Promise.resolve((Date.now() + 300000).toString());
+        }
+        if (key === 'oauth_state') {
+          return Promise.reject('string error');
+        }
+        return Promise.resolve(null);
+      });
+
+      await expect(stateValidator.validateState('test-state')).rejects.toThrow(OAuthError);
+    });
   });
 
   describe('validateStateOrThrow', () => {

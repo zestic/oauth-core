@@ -42,6 +42,58 @@ describe('OAuthCore', () => {
         });
       }).toThrow(OAuthError);
     });
+
+    it('should handle disabled flows configuration', () => {
+      const customCore = new OAuthCore(mockConfig, mockAdapters, {
+        disabledFlows: ['magic_link'],
+      });
+
+      const flows = customCore.getRegisteredFlows();
+      expect(flows).toHaveLength(1);
+      expect(flows[0]?.name).toBe('authorization_code');
+    });
+
+    it('should handle empty enabledFlows configuration', () => {
+      expect(() => {
+        new OAuthCore(mockConfig, mockAdapters, {
+          enabledFlows: [],
+        });
+      }).toThrow(OAuthError);
+    });
+
+    it('should register custom flows', () => {
+      const customHandler = {
+        name: 'custom_flow',
+        priority: 15,
+        canHandle: () => true,
+        handle: async () => ({ success: true }),
+      };
+
+      const customCore = new OAuthCore(mockConfig, mockAdapters, {
+        customFlows: [customHandler],
+      });
+
+      const flows = customCore.getRegisteredFlows();
+      expect(flows.map(f => f.name)).toContain('custom_flow');
+    });
+
+    it('should handle enabledFlows with custom flows', () => {
+      const customHandler = {
+        name: 'custom_flow',
+        priority: 15,
+        canHandle: () => true,
+        handle: async () => ({ success: true }),
+      };
+
+      const customCore = new OAuthCore(mockConfig, mockAdapters, {
+        customFlows: [customHandler],
+        enabledFlows: ['custom_flow'],
+      });
+
+      const flows = customCore.getRegisteredFlows();
+      expect(flows).toHaveLength(1);
+      expect(flows[0]?.name).toBe('custom_flow');
+    });
   });
 
   describe('handleCallback', () => {
@@ -132,6 +184,88 @@ describe('OAuthCore', () => {
       });
 
       await expect(oauthCore.handleCallback(params)).rejects.toThrow(OAuthError);
+    });
+
+    it('should handle flow validation failure', async () => {
+      // Create a mock handler that fails validation
+      const mockHandler = {
+        name: 'failing_flow',
+        priority: 10,
+        canHandle: () => true,
+        validate: async () => false,
+        handle: async () => ({ success: true }),
+      };
+
+      oauthCore.registerFlow(mockHandler);
+
+      const params = new URLSearchParams({ test: 'value' });
+
+      await expect(oauthCore.handleCallback(params, 'failing_flow')).rejects.toThrow(OAuthError);
+    });
+
+    it('should handle non-OAuth errors during callback', async () => {
+      // Create a mock handler that throws a non-OAuth error
+      const mockHandler = {
+        name: 'error_flow',
+        priority: 10,
+        canHandle: () => true,
+        handle: async () => {
+          throw new Error('Generic error');
+        },
+      };
+
+      oauthCore.registerFlow(mockHandler);
+
+      const params = new URLSearchParams({ test: 'value' });
+
+      await expect(oauthCore.handleCallback(params, 'error_flow')).rejects.toThrow(OAuthError);
+    });
+
+    it('should handle non-Error objects during callback', async () => {
+      // Create a mock handler that throws a non-Error object
+      const mockHandler = {
+        name: 'string_error_flow',
+        priority: 10,
+        canHandle: () => true,
+        handle: async () => {
+          throw 'String error';
+        },
+      };
+
+      oauthCore.registerFlow(mockHandler);
+
+      const params = new URLSearchParams({ test: 'value' });
+
+      await expect(oauthCore.handleCallback(params, 'string_error_flow')).rejects.toThrow(OAuthError);
+    });
+
+    it('should handle non-OAuth errors in callback', async () => {
+      const params = new URLSearchParams({ code: 'test-code', state: 'test-state' });
+
+      // Mock a non-OAuth error
+      (mockAdapters.http as MockHttpAdapter).mockResponse(mockConfig.endpoints.token, {
+        status: 500,
+        data: { error: 'server_error' },
+        headers: {},
+      });
+
+      await expect(oauthCore.handleCallback(params)).rejects.toThrow(OAuthError);
+    });
+
+    it('should handle string parameters in callback', async () => {
+      const paramString = 'code=test-code&state=test-state';
+
+      // Mock state validation - need to set both state and expiry
+      await mockAdapters.storage.setItem('oauth_state', 'test-state');
+      await mockAdapters.storage.setItem('oauth_state_expiry', (Date.now() + 300000).toString()); // 5 minutes from now
+
+      // Mock PKCE data for authorization code flow
+      await mockAdapters.storage.setItem('pkce_code_verifier', 'test-verifier');
+      await mockAdapters.storage.setItem('pkce_code_challenge', 'test-challenge');
+      await mockAdapters.storage.setItem('pkce_code_challenge_method', 'S256');
+
+      const result = await oauthCore.handleCallback(paramString);
+      expect(result.success).toBe(true);
     });
   });
 
@@ -225,6 +359,20 @@ describe('OAuthCore', () => {
       const result = await oauthCore.generateAuthorizationUrl(additionalParams);
 
       expect(result.url).toContain('custom_param=value+with+spaces+%26+symbols%21'); // URLSearchParams encodes spaces as + and ! as %21
+    });
+
+    it('should handle errors in generateAuthorizationUrl', async () => {
+      // Mock PKCE generation failure
+      mockAdapters.pkce.generateCodeChallenge = jest.fn().mockRejectedValue(new Error('PKCE failed'));
+
+      await expect(oauthCore.generateAuthorizationUrl()).rejects.toThrow(OAuthError);
+    });
+
+    it('should handle non-Error objects in generateAuthorizationUrl', async () => {
+      // Mock PKCE generation failure with non-Error object
+      mockAdapters.pkce.generateCodeChallenge = jest.fn().mockRejectedValue('string error');
+
+      await expect(oauthCore.generateAuthorizationUrl()).rejects.toThrow(OAuthError);
     });
   });
 

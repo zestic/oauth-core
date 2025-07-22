@@ -32,9 +32,22 @@ describe('UrlParser', () => {
     it('should parse query string without leading ?', () => {
       const queryString = 'code=test&state=abc';
       const parsed = UrlParser.parseParams(queryString);
-      
+
       expect(parsed.get('code')).toBe('test');
       expect(parsed.get('state')).toBe('abc');
+    });
+
+    it('should handle empty string', () => {
+      const parsed = UrlParser.parseParams('');
+
+      expect(parsed.toString()).toBe('');
+    });
+
+    it('should handle URL without query parameters', () => {
+      const url = 'https://example.com/callback';
+      const parsed = UrlParser.parseParams(url);
+
+      expect(parsed.toString()).toBe('');
     });
   });
 
@@ -160,7 +173,7 @@ describe('UrlParser', () => {
     it('should extract OAuth error information', () => {
       const params = new URLSearchParams('error=access_denied&error_description=User%20denied%20access');
       const error = UrlParser.extractOAuthError(params);
-      
+
       expect(error).toEqual({
         error: 'access_denied',
         errorDescription: 'User denied access',
@@ -170,10 +183,30 @@ describe('UrlParser', () => {
     it('should handle missing error information', () => {
       const params = new URLSearchParams('code=test');
       const error = UrlParser.extractOAuthError(params);
-      
+
       expect(error).toEqual({
         error: undefined,
         errorDescription: undefined,
+      });
+    });
+
+    it('should extract error without error_description', () => {
+      const params = new URLSearchParams('error=invalid_request');
+      const error = UrlParser.extractOAuthError(params);
+
+      expect(error).toEqual({
+        error: 'invalid_request',
+        errorDescription: undefined,
+      });
+    });
+
+    it('should extract error_description without error', () => {
+      const params = new URLSearchParams('error_description=Something%20went%20wrong');
+      const error = UrlParser.extractOAuthError(params);
+
+      expect(error).toEqual({
+        error: undefined,
+        errorDescription: 'Something went wrong',
       });
     });
   });
@@ -194,13 +227,33 @@ describe('UrlParser', () => {
     it('should redact sensitive parameters', () => {
       const params = new URLSearchParams('code=secret&token=secret&state=safe&other=value');
       const sanitized = UrlParser.sanitizeForLogging(params);
-      
+
       expect(sanitized).toEqual({
         code: '[REDACTED]',
         token: '[REDACTED]',
         state: 'safe',
         other: 'value',
       });
+    });
+
+    it('should redact all sensitive parameter types', () => {
+      const params = new URLSearchParams('code=secret&magic_link_token=secret&access_token=secret&refresh_token=secret&safe=value');
+      const sanitized = UrlParser.sanitizeForLogging(params);
+
+      expect(sanitized).toEqual({
+        code: '[REDACTED]',
+        magic_link_token: '[REDACTED]',
+        access_token: '[REDACTED]',
+        refresh_token: '[REDACTED]',
+        safe: 'value',
+      });
+    });
+
+    it('should handle empty parameters', () => {
+      const params = new URLSearchParams('');
+      const sanitized = UrlParser.sanitizeForLogging(params);
+
+      expect(sanitized).toEqual({});
     });
   });
 

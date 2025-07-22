@@ -219,6 +219,42 @@ describe('AuthorizationCodeFlowHandler', () => {
       // Verify PKCE data is cleared
       expect(await mockAdapters.storage.getItem('pkce_code_verifier')).toBeNull();
     });
+
+    it('should handle non-OAuth errors during token exchange', async () => {
+      (mockAdapters.http as MockHttpAdapter).mockResponse(mockConfig.endpoints.token, {
+        status: 500,
+        data: 'Internal Server Error',
+        headers: {},
+      });
+
+      const params = new URLSearchParams({
+        code: 'test-auth-code',
+      });
+
+      await expect(handler.handle(params, mockAdapters, mockConfig)).rejects.toThrow(OAuthError);
+    });
+
+    it('should handle state validation when no state stored', async () => {
+      await mockAdapters.storage.removeItem('oauth_state');
+
+      const params = new URLSearchParams({
+        code: 'test-auth-code',
+        state: 'some-state',
+      });
+
+      await expect(handler.handle(params, mockAdapters, mockConfig)).rejects.toThrow(OAuthError);
+    });
+
+    it('should handle expired state', async () => {
+      await mockAdapters.storage.setItem('oauth_state_expiry', (Date.now() - 1000).toString()); // 1 second ago
+
+      const params = new URLSearchParams({
+        code: 'test-auth-code',
+        state: 'test-state',
+      });
+
+      await expect(handler.handle(params, mockAdapters, mockConfig)).rejects.toThrow(OAuthError);
+    });
   });
 
   describe('properties', () => {

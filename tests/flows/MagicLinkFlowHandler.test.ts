@@ -149,6 +149,133 @@ describe('MagicLinkFlowHandler', () => {
       await expect(handler.handle(params, mockAdapters, mockConfig))
         .rejects.toThrow(OAuthError);
     });
+
+    it('should handle non-OAuth errors during token exchange', async () => {
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+      });
+
+      // Mock network error
+      (mockAdapters.http as MockHttpAdapter).mockResponse(mockConfig.endpoints.token, {
+        status: 500,
+        data: 'Internal Server Error',
+        headers: {},
+      });
+
+      await expect(handler.handle(params, mockAdapters, mockConfig))
+        .rejects.toThrow(OAuthError);
+    });
+
+    it('should handle state validation when no state stored', async () => {
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+        state: 'some-state',
+      });
+
+      // No state stored in storage
+      await expect(handler.handle(params, mockAdapters, mockConfig))
+        .rejects.toThrow(OAuthError);
+    });
+
+    it('should handle expired state', async () => {
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+        state: 'test-state',
+      });
+
+      // Mock expired state
+      await mockAdapters.storage.setItem('oauth_state', 'test-state');
+      await mockAdapters.storage.setItem('oauth_state_expiry', (Date.now() - 1000).toString()); // 1 second ago
+
+      await expect(handler.handle(params, mockAdapters, mockConfig))
+        .rejects.toThrow(OAuthError);
+    });
+
+    it('should handle flow with PKCE parameters', async () => {
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+        code_challenge: 'test-challenge',
+        code_challenge_method: 'S256',
+        code_verifier: 'test-verifier',
+        state: 'test-state',
+      });
+
+      // Mock valid state
+      await mockAdapters.storage.setItem('oauth_state', 'test-state');
+      await mockAdapters.storage.setItem('oauth_state_expiry', (Date.now() + 300000).toString());
+
+      const result = await handler.handle(params, mockAdapters, mockConfig);
+      expect(result.success).toBe(true);
+    });
+
+    it('should handle flow without state parameter', async () => {
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+      });
+
+      const result = await handler.handle(params, mockAdapters, mockConfig);
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('validate', () => {
+    it('should validate parameters with token', async () => {
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+      });
+
+      const isValid = await handler.validate(params);
+      expect(isValid).toBe(true);
+    });
+
+    it('should validate parameters with magic_link_token', async () => {
+      const params = new URLSearchParams({
+        magic_link_token: 'test-magic-token',
+      });
+
+      const isValid = await handler.validate(params);
+      expect(isValid).toBe(true);
+    });
+
+    it('should validate parameters with state', async () => {
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+        state: 'test-state',
+      });
+
+      const isValid = await handler.validate(params);
+      expect(isValid).toBe(true);
+    });
+
+    it('should return false for missing token', async () => {
+      const params = new URLSearchParams({
+        other_param: 'value',
+      });
+
+      const isValid = await handler.validate(params);
+      expect(isValid).toBe(false);
+    });
+
+    it('should return false when OAuth error is present', async () => {
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+        error: 'access_denied',
+      });
+
+      const isValid = await handler.validate(params);
+      expect(isValid).toBe(false);
+    });
+
+    it('should handle validation errors gracefully', async () => {
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+        error: 'invalid_request',
+        error_description: 'Invalid request',
+      });
+
+      const isValid = await handler.validate(params);
+      expect(isValid).toBe(false);
+    });
   });
 
   describe('properties', () => {
@@ -161,9 +288,13 @@ describe('MagicLinkFlowHandler', () => {
 
 describe('MagicLinkLoginFlowHandler', () => {
   let handler: MagicLinkLoginFlowHandler;
+  let mockAdapters: ReturnType<typeof createMockAdapters>;
+  let mockConfig: ReturnType<typeof createMockConfig>;
 
   beforeEach(() => {
     handler = new MagicLinkLoginFlowHandler();
+    mockAdapters = createMockAdapters();
+    mockConfig = createMockConfig();
   });
 
   describe('canHandle', () => {
@@ -192,6 +323,46 @@ describe('MagicLinkLoginFlowHandler', () => {
 
       expect(handler.canHandle(params)).toBe(false);
     });
+
+    it('should handle magic_link_token parameter', () => {
+      const params = new URLSearchParams({
+        magic_link_token: 'test-magic-token',
+        flow: 'login',
+      });
+
+      expect(handler.canHandle(params)).toBe(true);
+    });
+
+    it('should not handle without token parameter', () => {
+      const params = new URLSearchParams({
+        flow: 'login',
+      });
+
+      expect(handler.canHandle(params)).toBe(false);
+    });
+  });
+
+  describe('handle', () => {
+    it('should delegate to MagicLinkFlowHandler', async () => {
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+        flow: 'login',
+      });
+
+      // Mock successful token exchange
+      (mockAdapters.http as MockHttpAdapter).mockResponse(mockConfig.endpoints.token, {
+        status: 200,
+        data: {
+          access_token: 'test-access-token',
+          token_type: 'Bearer',
+          expires_in: 3600,
+        },
+        headers: {},
+      });
+
+      const result = await handler.handle(params, mockAdapters, mockConfig);
+      expect(result.success).toBe(true);
+    });
   });
 
   describe('properties', () => {
@@ -204,9 +375,13 @@ describe('MagicLinkLoginFlowHandler', () => {
 
 describe('MagicLinkRegistrationFlowHandler', () => {
   let handler: MagicLinkRegistrationFlowHandler;
+  let mockAdapters: ReturnType<typeof createMockAdapters>;
+  let mockConfig: ReturnType<typeof createMockConfig>;
 
   beforeEach(() => {
     handler = new MagicLinkRegistrationFlowHandler();
+    mockAdapters = createMockAdapters();
+    mockConfig = createMockConfig();
   });
 
   describe('canHandle', () => {
@@ -226,6 +401,54 @@ describe('MagicLinkRegistrationFlowHandler', () => {
       });
 
       expect(handler.canHandle(params)).toBe(false);
+    });
+
+    it('should not handle without flow parameter', () => {
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+      });
+
+      expect(handler.canHandle(params)).toBe(false);
+    });
+
+    it('should handle token parameter', () => {
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+        flow: 'registration',
+      });
+
+      expect(handler.canHandle(params)).toBe(true);
+    });
+
+    it('should not handle without token parameter', () => {
+      const params = new URLSearchParams({
+        flow: 'registration',
+      });
+
+      expect(handler.canHandle(params)).toBe(false);
+    });
+  });
+
+  describe('handle', () => {
+    it('should delegate to MagicLinkFlowHandler', async () => {
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+        flow: 'registration',
+      });
+
+      // Mock successful token exchange
+      (mockAdapters.http as MockHttpAdapter).mockResponse(mockConfig.endpoints.token, {
+        status: 200,
+        data: {
+          access_token: 'test-access-token',
+          token_type: 'Bearer',
+          expires_in: 3600,
+        },
+        headers: {},
+      });
+
+      const result = await handler.handle(params, mockAdapters, mockConfig);
+      expect(result.success).toBe(true);
     });
   });
 

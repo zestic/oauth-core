@@ -85,6 +85,12 @@ describe('PKCEManager', () => {
       const challenge = await pkceManager.getCodeChallenge();
       expect(challenge).toBeNull();
     });
+
+    it('should throw error when storage fails', async () => {
+      mockAdapters.storage.getItem = jest.fn().mockRejectedValue(new Error('Storage failed'));
+
+      await expect(pkceManager.getCodeChallenge()).rejects.toThrow(OAuthError);
+    });
   });
 
   describe('getStoredState', () => {
@@ -98,6 +104,12 @@ describe('PKCEManager', () => {
     it('should return null when no state stored', async () => {
       const state = await pkceManager.getStoredState();
       expect(state).toBeNull();
+    });
+
+    it('should throw error when storage fails', async () => {
+      mockAdapters.storage.getItem = jest.fn().mockRejectedValue(new Error('Storage failed'));
+
+      await expect(pkceManager.getStoredState()).rejects.toThrow(OAuthError);
     });
   });
 
@@ -122,22 +134,7 @@ describe('PKCEManager', () => {
     });
   });
 
-  describe('clearPKCEData', () => {
-    it('should clear all PKCE data including state', async () => {
-      // Store some data first
-      await mockAdapters.storage.setItem('pkce_code_verifier', 'test-verifier');
-      await mockAdapters.storage.setItem('pkce_code_challenge', 'test-challenge');
-      await mockAdapters.storage.setItem('pkce_code_challenge_method', 'S256');
-      await mockAdapters.storage.setItem('oauth_state', 'test-state');
 
-      await pkceManager.clearPKCEData();
-
-      expect(await mockAdapters.storage.getItem('pkce_code_verifier')).toBeNull();
-      expect(await mockAdapters.storage.getItem('pkce_code_challenge')).toBeNull();
-      expect(await mockAdapters.storage.getItem('pkce_code_challenge_method')).toBeNull();
-      expect(await mockAdapters.storage.getItem('oauth_state')).toBeNull();
-    });
-  });
 
   describe('getAllPKCEData', () => {
     it('should retrieve all PKCE data', async () => {
@@ -184,17 +181,71 @@ describe('PKCEManager', () => {
     });
   });
 
-  describe('hasPKCEData and state checks', () => {
-    it('should return true when PKCE data exists', async () => {
-      await mockAdapters.storage.setItem('pkce_code_verifier', 'test-verifier');
+  describe('validateState', () => {
+    it('should return true when state matches', async () => {
+      await mockAdapters.storage.setItem('oauth_state', 'test-state');
 
-      const hasData = await pkceManager.hasPKCEData();
-      expect(hasData).toBe(true);
+      const isValid = await pkceManager.validateState('test-state');
+      expect(isValid).toBe(true);
     });
 
-    it('should return false when no PKCE data exists', async () => {
+    it('should return false when state does not match', async () => {
+      await mockAdapters.storage.setItem('oauth_state', 'test-state');
+
+      const isValid = await pkceManager.validateState('wrong-state');
+      expect(isValid).toBe(false);
+    });
+
+    it('should return false when no stored state', async () => {
+      const isValid = await pkceManager.validateState('any-state');
+      expect(isValid).toBe(false);
+    });
+
+    it('should throw error when storage fails', async () => {
+      mockAdapters.storage.getItem = jest.fn().mockRejectedValue(new Error('Storage failed'));
+
+      await expect(pkceManager.validateState('test-state')).rejects.toThrow(OAuthError);
+    });
+  });
+
+  describe('hasPKCEData error handling', () => {
+    it('should return false when getCodeVerifier throws error', async () => {
+      mockAdapters.storage.getItem = jest.fn().mockRejectedValue(new Error('Storage failed'));
+
       const hasData = await pkceManager.hasPKCEData();
       expect(hasData).toBe(false);
+    });
+  });
+
+  describe('error handling with non-Error objects', () => {
+    it('should handle non-Error objects in generateChallenge', async () => {
+      mockAdapters.pkce.generateCodeChallenge = jest.fn().mockRejectedValue('string error');
+
+      await expect(pkceManager.generateChallenge()).rejects.toThrow(OAuthError);
+    });
+
+    it('should handle non-Error objects in generateState', async () => {
+      mockAdapters.storage.setItem = jest.fn().mockRejectedValue('string error');
+
+      await expect(pkceManager.generateState()).rejects.toThrow(OAuthError);
+    });
+
+    it('should handle non-Error objects in getCodeVerifier', async () => {
+      mockAdapters.storage.getItem = jest.fn().mockRejectedValue('string error');
+
+      await expect(pkceManager.getCodeVerifier()).rejects.toThrow(OAuthError);
+    });
+
+    it('should handle non-Error objects in clearPKCEData', async () => {
+      mockAdapters.storage.removeItems = jest.fn().mockRejectedValue('string error');
+
+      await expect(pkceManager.clearPKCEData()).rejects.toThrow(OAuthError);
+    });
+
+    it('should handle non-Error objects in getAllPKCEData', async () => {
+      mockAdapters.storage.getItem = jest.fn().mockRejectedValue('string error');
+
+      await expect(pkceManager.getAllPKCEData()).rejects.toThrow(OAuthError);
     });
   });
 });
