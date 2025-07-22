@@ -14,9 +14,9 @@ import type {
   MagicLinkConfig
 } from '../types/ServiceTypes';
 // GraphQL AST node interfaces
-interface ASTNode {
+export interface ASTNode {
   kind: string;
-  value?: string;
+  value?: string | number | boolean;
   fields?: Array<{ name: { value: string }; value: ASTNode }>;
   values?: ASTNode[];
 }
@@ -110,7 +110,7 @@ export const resolvers = {
           return ast.value;
         case 'IntValue':
         case 'FloatValue':
-          return ast.value ? parseFloat(ast.value) : 0;
+          return ast.value ? parseFloat(String(ast.value)) : 0;
         case 'ObjectValue':
           return ast.fields?.reduce((obj: Record<string, unknown>, field: { name: { value: string }; value: ASTNode }) => {
             obj[field.name.value] = resolvers.JSON.parseLiteral(field.value);
