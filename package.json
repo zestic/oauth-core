@@ -1,6 +1,6 @@
 {
   "name": "@zestic/oauth-core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Framework-agnostic OAuth authentication library with support for multiple OAuth flows",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,6 +25,7 @@
     "pkce",
     "authorization-code",
     "magic-link",
+    "graphql",
     "typescript"
   ],
   "author": "Zestic",
