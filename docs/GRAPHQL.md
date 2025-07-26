@@ -485,7 +485,7 @@ tests/
 ├── graphql/
 │   ├── resolvers.test.ts              # GraphQL resolver tests
 │   └── schema.test.ts                 # Schema validation tests
-└── integration/
+└── e2e/
     └── graphql-oauth-flow.test.ts     # End-to-end flow tests
 ```
 
@@ -524,9 +524,9 @@ describe('GraphQL Integration', () => {
 });
 ```
 
-### Integration Testing
+### End-to-End Testing
 
-The integration tests verify the complete flow from GraphQL mutations to OAuth callbacks:
+The end-to-end tests verify the complete flow from GraphQL mutations to OAuth callbacks:
 
 ```typescript
 // Test complete registration + magic link + OAuth flow

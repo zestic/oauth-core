@@ -1,9 +1,11 @@
 /**
- * Integration tests for GraphQL + OAuth flow
+ * End-to-end tests for GraphQL + OAuth flow
  * Tests the complete flow from GraphQL mutations to OAuth callback handling
  */
 
 import { MagicLinkFlowHandler } from '../../src/flows/MagicLinkFlowHandler';
+import { AuthorizationCodeFlowHandler } from '../../src/flows/AuthorizationCodeFlowHandler';
+import { OAuthCore } from '../../src/core/OAuthCore';
 import { resolvers, createGraphQLContext } from '../../src/graphql/resolvers';
 import type {
   ExtendedOAuthAdapters,
@@ -14,93 +16,35 @@ import type {
   EmailResult
 } from '../../src/types/ServiceTypes';
 import type { OAuthConfig } from '../../src/types/OAuthTypes';
+import {
+  createE2EAdapters,
+  createTestOAuthConfig,
+  createTestMagicLinkConfig,
+  setupCommonMocks
+} from './utils/test-adapters';
 
 
-// Mock extended adapters with in-memory storage
-const createIntegrationAdapters = (): ExtendedOAuthAdapters => {
-  const storage = new Map<string, string>();
-
-  return {
-    storage: {
-      setItem: jest.fn().mockImplementation(async (key: string, value: string) => {
-        storage.set(key, value);
-      }),
-      getItem: jest.fn().mockImplementation(async (key: string) => {
-        return storage.get(key) || null;
-      }),
-      removeItem: jest.fn().mockImplementation(async (key: string) => {
-        storage.delete(key);
-      }),
-      removeItems: jest.fn().mockImplementation(async (keys: string[]) => {
-        keys.forEach(key => storage.delete(key));
-      })
-    },
-    http: {
-      post: jest.fn(),
-      get: jest.fn()
-    },
-    pkce: {
-      generateCodeChallenge: jest.fn(),
-      generateState: jest.fn()
-    },
-    user: {
-      registerUser: jest.fn().mockResolvedValue({
-        success: true,
-        userId: 'user-123',
-        message: 'User registered successfully'
-      } as UserRegistrationResult),
-      userExists: jest.fn().mockResolvedValue(false),
-      getUserByEmail: jest.fn().mockResolvedValue(null)
-    },
-    email: {
-      sendMagicLink: jest.fn().mockResolvedValue({
-        success: true,
-        messageId: 'msg-123'
-      } as EmailResult),
-      sendRegistrationConfirmation: jest.fn().mockResolvedValue({
-        success: true,
-        messageId: 'msg-456'
-      } as EmailResult)
-    }
-  };
-};
-
-describe('GraphQL + OAuth Integration', () => {
+describe('GraphQL + OAuth End-to-End', () => {
   let adapters: ExtendedOAuthAdapters;
   let oauthConfig: OAuthConfig;
   let magicLinkConfig: MagicLinkConfig;
   let graphqlContext: any;
   let magicLinkHandler: MagicLinkFlowHandler;
+  let oauthCore: OAuthCore;
+  let authCodeHandler: AuthorizationCodeFlowHandler;
 
   beforeEach(() => {
-    adapters = createIntegrationAdapters();
-    
-    oauthConfig = {
-      clientId: 'test-client-id',
-      endpoints: {
-        authorization: 'https://auth.example.com/authorize',
-        token: 'https://auth.example.com/token',
-        revocation: 'https://auth.example.com/revoke'
-      },
-      redirectUri: 'https://app.example.com/callback',
-      scopes: ['read', 'write']
-    };
-
-    magicLinkConfig = {
-      baseUrl: 'https://app.example.com/auth/callback',
-      tokenEndpoint: '/oauth/token',
-      expirationMinutes: 15
-    };
+    adapters = createE2EAdapters();
+    oauthConfig = createTestOAuthConfig();
+    magicLinkConfig = createTestMagicLinkConfig();
 
     graphqlContext = createGraphQLContext(adapters, magicLinkConfig);
     magicLinkHandler = new MagicLinkFlowHandler();
+    oauthCore = new OAuthCore(oauthConfig, adapters);
+    authCodeHandler = new AuthorizationCodeFlowHandler();
 
-    // Mock PKCE generation
-    (adapters.pkce.generateCodeChallenge as jest.Mock).mockResolvedValue({
-      codeChallenge: 'test-challenge',
-      codeChallengeMethod: 'S256',
-      codeVerifier: 'test-verifier'
-    });
+    // Setup common mocks
+    setupCommonMocks(adapters);
   });
 
   describe('Complete Registration + Magic Link Flow', () => {
@@ -267,6 +211,153 @@ describe('GraphQL + OAuth Integration', () => {
     });
   });
 
+  describe('Complete Registration + OAuth Authorization Code Flow', () => {
+    it('should handle complete user registration and traditional OAuth flow', async () => {
+      // Step 1: User registration via GraphQL
+      const registrationInput: RegistrationInput = {
+        email: 'user@example.com',
+        additionalData: { firstName: 'John', lastName: 'Doe' },
+        codeChallenge: 'registration-challenge',
+        codeChallengeMethod: 'S256',
+        redirectUri: 'https://app.example.com/callback',
+        state: 'registration-state'
+      };
+
+      const registrationResult = await resolvers.Mutation.register(
+        null,
+        { input: registrationInput },
+        graphqlContext
+      );
+
+      expect(registrationResult).toEqual({
+        success: true,
+        message: 'User registered successfully',
+        code: 'REGISTRATION_SUCCESS'
+      });
+
+      // Verify user was registered
+      expect(adapters.user.registerUser).toHaveBeenCalledWith(
+        'user@example.com',
+        { firstName: 'John', lastName: 'Doe' }
+      );
+
+      // Verify PKCE data was stored during registration
+      expect(await adapters.storage.getItem('pkce_challenge')).toBe('registration-challenge');
+      expect(await adapters.storage.getItem('pkce_state')).toBe('registration-state');
+
+      // Step 2: Generate OAuth authorization URL
+      const authUrlResult = await oauthCore.generateAuthorizationUrl({
+        email: 'user@example.com',
+        flow: 'registration'
+      });
+
+      expect(authUrlResult.url).toContain('response_type=code');
+      expect(authUrlResult.url).toContain('client_id=test-client-id');
+      expect(authUrlResult.url).toContain('redirect_uri=https%3A%2F%2Fapp.example.com%2Fcallback');
+      expect(authUrlResult.url).toContain('code_challenge=test-challenge');
+      expect(authUrlResult.url).toContain('code_challenge_method=S256');
+      expect(authUrlResult.url).toContain('state=test-oauth-state');
+      expect(authUrlResult.state).toBe('test-oauth-state');
+
+      // Verify OAuth state was stored
+      expect(await adapters.storage.getItem('oauth_state')).toBe('test-oauth-state');
+
+      // Step 3: Simulate OAuth provider callback with authorization code
+      const callbackParams = new URLSearchParams({
+        code: 'test-authorization-code',
+        state: 'test-oauth-state'
+      });
+
+      // Verify the handler can handle this callback
+      expect(authCodeHandler.canHandle(callbackParams)).toBe(true);
+
+      // Mock successful token exchange
+      (adapters.http.post as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: {
+          access_token: 'oauth-access-token-123',
+          refresh_token: 'oauth-refresh-token-456',
+          expires_in: 3600,
+          token_type: 'Bearer'
+        },
+        headers: {}
+      });
+
+      // Step 4: Handle the OAuth callback
+      const oauthResult = await authCodeHandler.handle(callbackParams, adapters, oauthConfig);
+
+      expect(oauthResult).toEqual({
+        success: true,
+        accessToken: 'oauth-access-token-123',
+        refreshToken: 'oauth-refresh-token-456',
+        expiresIn: 3600
+      });
+
+      // Verify tokens were stored
+      expect(await adapters.storage.getItem('access_token')).toBe('oauth-access-token-123');
+      expect(await adapters.storage.getItem('refresh_token')).toBe('oauth-refresh-token-456');
+
+      // Verify PKCE data was cleaned up after successful exchange
+      expect(await adapters.storage.getItem('pkce_code_verifier')).toBeNull();
+
+      // Verify state was cleaned up after validation
+      expect(await adapters.storage.getItem('oauth_state')).toBeNull();
+    });
+
+    it('should validate state parameter during OAuth callback', async () => {
+      // Step 1: Generate authorization URL with specific state
+      const authUrlResult = await oauthCore.generateAuthorizationUrl();
+      const expectedState = authUrlResult.state;
+
+      // Step 2: Simulate callback with correct state
+      const callbackParams = new URLSearchParams({
+        code: 'test-authorization-code',
+        state: expectedState
+      });
+
+      // Mock successful token exchange
+      (adapters.http.post as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: {
+          access_token: 'test-access-token',
+          token_type: 'Bearer'
+        },
+        headers: {}
+      });
+
+      const result = await authCodeHandler.handle(callbackParams, adapters, oauthConfig);
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject callback with invalid state', async () => {
+      // Step 1: Generate authorization URL
+      await oauthCore.generateAuthorizationUrl();
+
+      // Step 2: Simulate callback with wrong state
+      const callbackParams = new URLSearchParams({
+        code: 'test-authorization-code',
+        state: 'wrong-state'
+      });
+
+      // Should throw error due to invalid state
+      await expect(
+        authCodeHandler.handle(callbackParams, adapters, oauthConfig)
+      ).rejects.toThrow();
+    });
+
+    it('should handle OAuth error in callback', async () => {
+      // Simulate OAuth provider returning an error
+      const callbackParams = new URLSearchParams({
+        error: 'access_denied',
+        error_description: 'User denied access',
+        state: 'test-state'
+      });
+
+      // Should not be able to handle error callbacks
+      expect(authCodeHandler.canHandle(callbackParams)).toBe(false);
+    });
+  });
+
   describe('Error Scenarios', () => {
     it('should handle registration failure gracefully', async () => {
       (adapters.user.registerUser as jest.Mock).mockResolvedValue({
@@ -358,6 +449,8 @@ describe('GraphQL + OAuth Integration', () => {
       ).rejects.toThrow();
     });
   });
+
+
 
   describe('State Management', () => {
     it('should properly validate state across GraphQL and OAuth flows', async () => {
