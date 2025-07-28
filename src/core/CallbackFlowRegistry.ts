@@ -2,15 +2,15 @@
  * Registry for managing OAuth flow handlers
  */
 
-import { FlowHandler, FlowDetectionResult, FlowRegistryOptions } from '../types/FlowTypes';
+import { CallbackFlowHandler, CallbackFlowDetectionResult, CallbackFlowRegistryOptions } from '../types/CallbackFlowTypes';
 import { OAuthConfig, OAUTH_ERROR_CODES } from '../types/OAuthTypes';
 import { ErrorHandler } from '../utils/ErrorHandler';
 
-export class FlowRegistry {
-  private handlers = new Map<string, FlowHandler>();
-  private options: FlowRegistryOptions;
+export class CallbackFlowRegistry {
+  private handlers = new Map<string, CallbackFlowHandler>();
+  private options: CallbackFlowRegistryOptions;
 
-  constructor(options: FlowRegistryOptions = {}) {
+  constructor(options: CallbackFlowRegistryOptions = {}) {
     this.options = {
       allowDuplicates: false,
       defaultPriority: 50,
@@ -21,7 +21,7 @@ export class FlowRegistry {
   /**
    * Register a flow handler
    */
-  register(handler: FlowHandler): void {
+  register(handler: CallbackFlowHandler): void {
     if (!this.options.allowDuplicates && this.handlers.has(handler.name)) {
       throw ErrorHandler.createError(
         `Flow handler '${handler.name}' is already registered`,
@@ -42,21 +42,21 @@ export class FlowRegistry {
   /**
    * Get a specific flow handler by name
    */
-  getHandler(name: string): FlowHandler | undefined {
+  getHandler(name: string): CallbackFlowHandler | undefined {
     return this.handlers.get(name);
   }
 
   /**
    * Get all registered handlers
    */
-  getAllHandlers(): FlowHandler[] {
+  getAllHandlers(): CallbackFlowHandler[] {
     return Array.from(this.handlers.values());
   }
 
   /**
    * Get handlers sorted by priority
    */
-  getHandlersByPriority(): FlowHandler[] {
+  getHandlersByPriority(): CallbackFlowHandler[] {
     return Array.from(this.handlers.values())
       .sort((a, b) => a.priority - b.priority);
   }
@@ -64,7 +64,7 @@ export class FlowRegistry {
   /**
    * Auto-detect which flow to use based on parameters
    */
-  detectFlow(params: URLSearchParams, config: OAuthConfig): FlowHandler | undefined {
+  detectFlow(params: URLSearchParams, config: OAuthConfig): CallbackFlowHandler | undefined {
     const sortedHandlers = this.getHandlersByPriority();
     
     for (const handler of sortedHandlers) {
@@ -79,7 +79,7 @@ export class FlowRegistry {
   /**
    * Detect flow with confidence scoring
    */
-  detectFlowWithConfidence(params: URLSearchParams, config: OAuthConfig): FlowDetectionResult | undefined {
+  detectFlowWithConfidence(params: URLSearchParams, config: OAuthConfig): CallbackFlowDetectionResult | undefined {
     const sortedHandlers = this.getHandlersByPriority();
     
     for (const handler of sortedHandlers) {
@@ -102,7 +102,7 @@ export class FlowRegistry {
   /**
    * Get all handlers that can handle the given parameters
    */
-  getCompatibleHandlers(params: URLSearchParams, config: OAuthConfig): FlowHandler[] {
+  getCompatibleHandlers(params: URLSearchParams, config: OAuthConfig): CallbackFlowHandler[] {
     return this.getAllHandlers().filter(handler => handler.canHandle(params, config));
   }
 
@@ -151,7 +151,7 @@ export class FlowRegistry {
   /**
    * Register multiple handlers at once
    */
-  registerMultiple(handlers: FlowHandler[]): void {
+  registerMultiple(handlers: CallbackFlowHandler[]): void {
     for (const handler of handlers) {
       this.register(handler);
     }
@@ -160,8 +160,8 @@ export class FlowRegistry {
   /**
    * Create a copy of the registry
    */
-  clone(): FlowRegistry {
-    const newRegistry = new FlowRegistry(this.options);
+  clone(): CallbackFlowRegistry {
+    const newRegistry = new CallbackFlowRegistry(this.options);
     
     for (const handler of this.getAllHandlers()) {
       newRegistry.register(handler);

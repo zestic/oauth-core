@@ -1,10 +1,10 @@
-import { FlowRegistry } from '../../src/core/FlowRegistry';
-import { FlowHandler } from '../../src/types/FlowTypes';
+import { CallbackFlowRegistry } from '../../src/core/CallbackFlowRegistry';
+import { CallbackFlowHandler } from '../../src/types/CallbackFlowTypes';
 import { OAuthError, OAuthResult } from '../../src/types/OAuthTypes';
 import { createMockConfig } from '../mocks/adapters';
 
 // Mock flow handler for testing
-class MockFlowHandler implements FlowHandler {
+class MockCallbackFlowHandler implements CallbackFlowHandler {
   constructor(
     public readonly name: string,
     public readonly priority: number = 50
@@ -14,23 +14,27 @@ class MockFlowHandler implements FlowHandler {
     return params.has(this.name);
   }
 
+  async validate(): Promise<boolean> {
+    return true;
+  }
+
   async handle(): Promise<OAuthResult> {
     return { success: true, accessToken: 'test-token' };
   }
 }
 
-describe('FlowRegistry', () => {
-  let registry: FlowRegistry;
+describe('CallbackFlowRegistry', () => {
+  let registry: CallbackFlowRegistry;
   let mockConfig: ReturnType<typeof createMockConfig>;
 
   beforeEach(() => {
-    registry = new FlowRegistry();
+    registry = new CallbackFlowRegistry();
     mockConfig = createMockConfig();
   });
 
   describe('register', () => {
     it('should register a flow handler', () => {
-      const handler = new MockFlowHandler('test_flow');
+      const handler = new MockCallbackFlowHandler('test_flow');
       
       registry.register(handler);
       
@@ -39,8 +43,8 @@ describe('FlowRegistry', () => {
     });
 
     it('should register multiple handlers', () => {
-      const handler1 = new MockFlowHandler('flow1', 10);
-      const handler2 = new MockFlowHandler('flow2', 20);
+      const handler1 = new MockCallbackFlowHandler('flow1', 10);
+      const handler2 = new MockCallbackFlowHandler('flow2', 20);
       
       registry.register(handler1);
       registry.register(handler2);
@@ -49,8 +53,8 @@ describe('FlowRegistry', () => {
     });
 
     it('should throw error when registering duplicate handler by default', () => {
-      const handler1 = new MockFlowHandler('test_flow');
-      const handler2 = new MockFlowHandler('test_flow');
+      const handler1 = new MockCallbackFlowHandler('test_flow');
+      const handler2 = new MockCallbackFlowHandler('test_flow');
       
       registry.register(handler1);
       
@@ -58,9 +62,9 @@ describe('FlowRegistry', () => {
     });
 
     it('should allow duplicates when configured', () => {
-      const registryWithDuplicates = new FlowRegistry({ allowDuplicates: true });
-      const handler1 = new MockFlowHandler('test_flow');
-      const handler2 = new MockFlowHandler('test_flow');
+      const registryWithDuplicates = new CallbackFlowRegistry({ allowDuplicates: true });
+      const handler1 = new MockCallbackFlowHandler('test_flow');
+      const handler2 = new MockCallbackFlowHandler('test_flow');
 
       registryWithDuplicates.register(handler1);
 
@@ -75,7 +79,7 @@ describe('FlowRegistry', () => {
 
   describe('unregister', () => {
     it('should unregister a flow handler', () => {
-      const handler = new MockFlowHandler('test_flow');
+      const handler = new MockCallbackFlowHandler('test_flow');
       
       registry.register(handler);
       expect(registry.hasHandler('test_flow')).toBe(true);
@@ -91,9 +95,9 @@ describe('FlowRegistry', () => {
 
   describe('getCompatibleHandlers', () => {
     it('should find compatible handlers', () => {
-      const handler1 = new MockFlowHandler('flow1', 10);
-      const handler2 = new MockFlowHandler('flow2', 20);
-      const handler3 = new MockFlowHandler('flow3', 30);
+      const handler1 = new MockCallbackFlowHandler('flow1', 10);
+      const handler2 = new MockCallbackFlowHandler('flow2', 20);
+      const handler3 = new MockCallbackFlowHandler('flow3', 30);
 
       registry.register(handler1);
       registry.register(handler2);
@@ -108,7 +112,7 @@ describe('FlowRegistry', () => {
     });
 
     it('should return empty array when no compatible handlers', () => {
-      const handler = new MockFlowHandler('test_flow');
+      const handler = new MockCallbackFlowHandler('test_flow');
       registry.register(handler);
 
       const params = new URLSearchParams({ other_param: 'value' });
@@ -122,11 +126,11 @@ describe('FlowRegistry', () => {
     it('should return correct handler count', () => {
       expect(registry.getHandlerCount()).toBe(0);
 
-      const handler1 = new MockFlowHandler('flow1');
+      const handler1 = new MockCallbackFlowHandler('flow1');
       registry.register(handler1);
       expect(registry.getHandlerCount()).toBe(1);
 
-      const handler2 = new MockFlowHandler('flow2');
+      const handler2 = new MockCallbackFlowHandler('flow2');
       registry.register(handler2);
       expect(registry.getHandlerCount()).toBe(2);
     });
@@ -134,7 +138,7 @@ describe('FlowRegistry', () => {
 
   describe('getHandler', () => {
     it('should get handler by name', () => {
-      const handler = new MockFlowHandler('test_flow');
+      const handler = new MockCallbackFlowHandler('test_flow');
       registry.register(handler);
       
       const retrieved = registry.getHandler('test_flow');
@@ -149,7 +153,7 @@ describe('FlowRegistry', () => {
 
   describe('hasHandler', () => {
     it('should return true for existing handler', () => {
-      const handler = new MockFlowHandler('test_flow');
+      const handler = new MockCallbackFlowHandler('test_flow');
       registry.register(handler);
       
       expect(registry.hasHandler('test_flow')).toBe(true);
@@ -162,8 +166,8 @@ describe('FlowRegistry', () => {
 
   describe('clear', () => {
     it('should clear all handlers', () => {
-      const handler1 = new MockFlowHandler('flow1');
-      const handler2 = new MockFlowHandler('flow2');
+      const handler1 = new MockCallbackFlowHandler('flow1');
+      const handler2 = new MockCallbackFlowHandler('flow2');
       
       registry.register(handler1);
       registry.register(handler2);
@@ -178,8 +182,8 @@ describe('FlowRegistry', () => {
 
   describe('validateRequiredHandlers', () => {
     it('should not throw when all required handlers are present', () => {
-      const handler1 = new MockFlowHandler('flow1');
-      const handler2 = new MockFlowHandler('flow2');
+      const handler1 = new MockCallbackFlowHandler('flow1');
+      const handler2 = new MockCallbackFlowHandler('flow2');
       
       registry.register(handler1);
       registry.register(handler2);
@@ -188,7 +192,7 @@ describe('FlowRegistry', () => {
     });
 
     it('should throw when required handlers are missing', () => {
-      const handler1 = new MockFlowHandler('flow1');
+      const handler1 = new MockCallbackFlowHandler('flow1');
       registry.register(handler1);
       
       expect(() => registry.validateRequiredHandlers(['flow1', 'flow2', 'flow3']))
@@ -199,9 +203,9 @@ describe('FlowRegistry', () => {
   describe('registerMultiple', () => {
     it('should register multiple handlers at once', () => {
       const handlers = [
-        new MockFlowHandler('flow1'),
-        new MockFlowHandler('flow2'),
-        new MockFlowHandler('flow3'),
+        new MockCallbackFlowHandler('flow1'),
+        new MockCallbackFlowHandler('flow2'),
+        new MockCallbackFlowHandler('flow3'),
       ];
       
       registry.registerMultiple(handlers);
@@ -215,8 +219,8 @@ describe('FlowRegistry', () => {
 
   describe('clone', () => {
     it('should create a copy of the registry', () => {
-      const handler1 = new MockFlowHandler('flow1');
-      const handler2 = new MockFlowHandler('flow2');
+      const handler1 = new MockCallbackFlowHandler('flow1');
+      const handler2 = new MockCallbackFlowHandler('flow2');
       
       registry.register(handler1);
       registry.register(handler2);

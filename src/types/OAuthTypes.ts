@@ -63,7 +63,7 @@ export interface PKCEChallenge {
   codeVerifier: string;
 }
 
-// FlowConfiguration and FlowHandler are defined in ConfigTypes.ts and FlowTypes.ts respectively
+// FlowConfiguration and CallbackFlowHandler are defined in ConfigTypes.ts and FlowTypes.ts respectively
 
 export interface TokenExchangeRequest {
   grantType: string;

@@ -112,7 +112,7 @@ tests/
 To add a new OAuth flow:
 
 1. Create a new flow handler in `src/flows/`
-2. Extend `BaseFlowHandler` or implement `FlowHandler` interface
+2. Extend `BaseCallbackFlowHandler` or implement `CallbackFlowHandler` interface
 3. Add comprehensive tests
 4. Update the main exports
 5. Document the new flow in README

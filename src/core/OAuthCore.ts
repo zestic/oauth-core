@@ -2,7 +2,7 @@
  * Main OAuth orchestrator
  */
 
-import { FlowRegistry } from './FlowRegistry';
+import { CallbackFlowRegistry } from './CallbackFlowRegistry';
 import { PKCEManager } from './PKCEManager';
 import { TokenManager } from './TokenManager';
 import { StateValidator } from './StateValidator';
@@ -13,13 +13,13 @@ import {
   FlowConfiguration,
   OAUTH_ERROR_CODES
 } from '../types/OAuthTypes';
-import { FlowHandler } from '../types/FlowTypes';
+import { CallbackFlowHandler } from '../types/CallbackFlowTypes';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { UrlParser } from '../utils/UrlParser';
-import { AuthorizationCodeFlowHandler, MagicLinkFlowHandler } from '../flows';
+import { MagicLinkFlowHandler } from '../flows';
 
 export class OAuthCore {
-  private flowRegistry: FlowRegistry;
+  private flowRegistry: CallbackFlowRegistry;
   private pkceManager: PKCEManager;
   private tokenManager: TokenManager;
   private stateValidator: StateValidator;
@@ -29,7 +29,7 @@ export class OAuthCore {
     private adapters: OAuthAdapters,
     flowConfig?: FlowConfiguration
   ) {
-    this.flowRegistry = new FlowRegistry();
+    this.flowRegistry = new CallbackFlowRegistry();
     this.pkceManager = new PKCEManager(adapters.pkce, adapters.storage);
     this.tokenManager = new TokenManager(adapters.http, adapters.storage);
     this.stateValidator = new StateValidator(adapters.storage);
@@ -48,7 +48,7 @@ export class OAuthCore {
       // Log callback attempt (with sanitized parameters)
       console.log('[OAuthCore] Handling callback:', UrlParser.sanitizeForLogging(urlParams));
 
-      let handler: FlowHandler | undefined;
+      let handler: CallbackFlowHandler | undefined;
 
       // Try explicit flow first if specified
       if (explicitFlow) {
@@ -67,8 +67,8 @@ export class OAuthCore {
 
       console.log(`[OAuthCore] Using flow handler: ${handler.name}`);
 
-      // Validate if handler supports validation
-      if (handler.validate && !(await handler.validate(urlParams, this.config))) {
+      // Validate parameters before handling
+      if (!(await handler.validate(urlParams, this.config))) {
         throw ErrorHandler.handleFlowValidationFailed(handler.name);
       }
 
@@ -207,7 +207,7 @@ export class OAuthCore {
   /**
    * Register a custom flow handler
    */
-  registerFlow(handler: FlowHandler): void {
+  registerFlow(handler: CallbackFlowHandler): void {
     this.flowRegistry.register(handler);
   }
 
@@ -221,14 +221,14 @@ export class OAuthCore {
   /**
    * Get all registered flow handlers
    */
-  getRegisteredFlows(): FlowHandler[] {
+  getRegisteredFlows(): CallbackFlowHandler[] {
     return this.flowRegistry.getAllHandlers();
   }
 
   /**
    * Get compatible handlers for given parameters
    */
-  getCompatibleHandlers(params: URLSearchParams | string): FlowHandler[] {
+  getCompatibleHandlers(params: URLSearchParams | string): CallbackFlowHandler[] {
     const urlParams = typeof params === 'string' ? UrlParser.parseParams(params) : params;
     return this.flowRegistry.getCompatibleHandlers(urlParams, this.config);
   }
@@ -239,7 +239,6 @@ export class OAuthCore {
   private initializeFlows(flowConfig?: FlowConfiguration): void {
     // Register built-in flows first
     const builtInHandlers = [
-      new AuthorizationCodeFlowHandler(),
       new MagicLinkFlowHandler(),
     ];
 

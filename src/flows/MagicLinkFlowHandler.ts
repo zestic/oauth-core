@@ -2,24 +2,31 @@
  * Magic Link Flow Handler
  */
 
-import { BaseFlowHandler } from './FlowHandler';
+import { BaseCallbackFlowHandler } from './BaseCallbackFlowHandler';
 import { OAuthConfig, OAuthAdapters, OAuthResult, OAUTH_ERROR_CODES } from '../types/OAuthTypes';
-import { FLOW_PRIORITIES } from '../types/FlowTypes';
+import { FLOW_PRIORITIES } from '../types/CallbackFlowTypes';
 import { TokenManager } from '../core/TokenManager';
 import { StateValidator } from '../core/StateValidator';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { UrlParser } from '../utils/UrlParser';
 
-export class MagicLinkFlowHandler extends BaseFlowHandler {
+export class MagicLinkFlowHandler extends BaseCallbackFlowHandler {
   readonly name = 'magic_link';
   readonly priority = FLOW_PRIORITIES.HIGH; // Higher priority than standard OAuth
 
   /**
    * Check if this handler can process the given parameters
    */
-  canHandle(params: URLSearchParams): boolean {
+  canHandle(params: URLSearchParams, config: OAuthConfig): boolean {
     // Magic link flow requires either 'token' or 'magic_link_token' parameter
-    return params.has('token') || params.has('magic_link_token');
+    const hasRequiredParams = params.has('token') || params.has('magic_link_token');
+
+    // Check if this flow is explicitly disabled in config
+    if (config.flows?.disabledFlows?.includes(this.name)) {
+      return false;
+    }
+
+    return hasRequiredParams;
   }
 
   /**
@@ -177,14 +184,19 @@ export function createMagicLinkFlowHandler(): MagicLinkFlowHandler {
 /**
  * Specialized handlers for different magic link flows
  */
-export class MagicLinkLoginFlowHandler extends BaseFlowHandler {
+export class MagicLinkLoginFlowHandler extends BaseCallbackFlowHandler {
   readonly name = 'magic_link_login';
   readonly priority = FLOW_PRIORITIES.HIGH;
 
-  canHandle(params: URLSearchParams): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  canHandle(params: URLSearchParams, _config: OAuthConfig): boolean {
     const hasToken = params.has('token') || params.has('magic_link_token');
     const flow = params.get('flow');
     return hasToken && flow === 'login';
+  }
+
+  async validate(params: URLSearchParams, config: OAuthConfig): Promise<boolean> {
+    return this.canHandle(params, config);
   }
 
   async handle(params: URLSearchParams, adapters: OAuthAdapters, config: OAuthConfig): Promise<OAuthResult> {
@@ -193,14 +205,19 @@ export class MagicLinkLoginFlowHandler extends BaseFlowHandler {
   }
 }
 
-export class MagicLinkRegistrationFlowHandler extends BaseFlowHandler {
+export class MagicLinkRegistrationFlowHandler extends BaseCallbackFlowHandler {
   readonly name = 'magic_link_registration';
   readonly priority = FLOW_PRIORITIES.HIGH;
 
-  canHandle(params: URLSearchParams): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  canHandle(params: URLSearchParams, _config: OAuthConfig): boolean {
     const hasToken = params.has('token') || params.has('magic_link_token');
     const flow = params.get('flow');
     return hasToken && flow === 'registration';
+  }
+
+  async validate(params: URLSearchParams, config: OAuthConfig): Promise<boolean> {
+    return this.canHandle(params, config);
   }
 
   async handle(params: URLSearchParams, adapters: OAuthAdapters, config: OAuthConfig): Promise<OAuthResult> {

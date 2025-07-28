@@ -4,7 +4,7 @@
 
 // Core classes
 export { OAuthCore } from './core/OAuthCore';
-export { FlowRegistry } from './core/FlowRegistry';
+export { CallbackFlowRegistry } from './core/CallbackFlowRegistry';
 export { PKCEManager } from './core/PKCEManager';
 export { TokenManager } from './core/TokenManager';
 export { StateValidator } from './core/StateValidator';
@@ -56,14 +56,14 @@ export type {
   RegistrationResponse,
   MagicLinkResponse,
   UserAdapter,
-  EmailAdapter,
+  GraphQLAdapter,
   ExtendedOAuthAdapters,
   MagicLinkConfig,
   MagicLinkToken,
   UserRegistrationResult,
   UserInfo,
-  EmailOptions,
-  EmailResult,
+  GraphQLOptions,
+  GraphQLResult,
   ServiceResult
 } from './types/ServiceTypes';
 

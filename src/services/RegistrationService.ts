@@ -58,18 +58,18 @@ export class RegistrationService {
         };
       }
 
-      // Send registration confirmation email if available
+      // Trigger server-side registration confirmation via GraphQL
       try {
-        await this.adapters.email.sendRegistrationConfirmation(input.email, {
+        await this.adapters.graphql.sendRegistrationConfirmationMutation(input.email, {
           subject: 'Registration Successful',
           templateData: {
             email: input.email,
             redirectUri: input.redirectUri
           }
         });
-      } catch (emailError) {
-        // Log email error but don't fail the registration
-        console.warn('Failed to send registration confirmation email:', emailError);
+      } catch (graphqlError) {
+        // Log GraphQL error but don't fail the registration
+        console.warn('Failed to trigger registration confirmation:', graphqlError);
       }
 
       return {

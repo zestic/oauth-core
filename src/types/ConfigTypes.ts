@@ -2,7 +2,7 @@
  * Configuration-related types and interfaces
  */
 
-import type { FlowHandler } from './FlowTypes';
+import type { CallbackFlowHandler } from './CallbackFlowTypes';
 
 export interface OAuthEndpoints {
   authorization: string;
@@ -13,7 +13,7 @@ export interface OAuthEndpoints {
 export interface FlowConfiguration {
   enabledFlows?: string[];
   disabledFlows?: string[];
-  customFlows?: FlowHandler[];
+  customFlows?: CallbackFlowHandler[];
   defaultFlow?: string;
   detectionStrategy?: DetectionStrategy;
 }

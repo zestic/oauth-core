@@ -168,8 +168,8 @@ export const validationHelpers = {
       throw new Error('User adapter not provided in GraphQL context');
     }
 
-    if (!context.adapters.email) {
-      throw new Error('Email adapter not provided in GraphQL context');
+    if (!context.adapters.graphql) {
+      throw new Error('GraphQL adapter not provided in GraphQL context');
     }
 
     if (!context.magicLinkConfig) {

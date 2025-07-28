@@ -4,7 +4,7 @@ import type {
   ExtendedOAuthAdapters,
   RegistrationInput,
   UserRegistrationResult,
-  EmailResult
+  GraphQLResult
 } from '../../src/types/ServiceTypes';
 
 
@@ -62,10 +62,10 @@ describe('RegistrationService', () => {
       userId: 'user-123',
       message: 'User registered successfully'
     } as UserRegistrationResult);
-    (mockAdapters.email.sendRegistrationConfirmation as jest.Mock).mockResolvedValue({
+    (mockAdapters.graphql.sendRegistrationConfirmationMutation as jest.Mock).mockResolvedValue({
       success: true,
       messageId: 'msg-123'
-    } as EmailResult);
+    } as GraphQLResult);
   });
 
   describe('register', () => {
@@ -96,8 +96,8 @@ describe('RegistrationService', () => {
         { firstName: 'John', lastName: 'Doe' }
       );
       
-      // Verify confirmation email
-      expect(mockAdapters.email.sendRegistrationConfirmation).toHaveBeenCalledWith(
+      // Verify confirmation GraphQL mutation
+      expect(mockAdapters.graphql.sendRegistrationConfirmationMutation).toHaveBeenCalledWith(
         'test@example.com',
         expect.objectContaining({
           subject: 'Registration Successful',
@@ -138,9 +138,9 @@ describe('RegistrationService', () => {
       });
     });
 
-    it('should continue registration even if confirmation email fails', async () => {
-      (mockAdapters.email.sendRegistrationConfirmation as jest.Mock).mockRejectedValue(
-        new Error('Email service unavailable')
+    it('should continue registration even if confirmation GraphQL mutation fails', async () => {
+      (mockAdapters.graphql.sendRegistrationConfirmationMutation as jest.Mock).mockRejectedValue(
+        new Error('GraphQL service unavailable')
       );
 
       const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
@@ -154,7 +154,7 @@ describe('RegistrationService', () => {
       });
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        'Failed to send registration confirmation email:',
+        'Failed to trigger registration confirmation:',
         expect.any(Error)
       );
 

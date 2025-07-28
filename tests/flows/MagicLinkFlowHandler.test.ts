@@ -31,7 +31,7 @@ describe('MagicLinkFlowHandler', () => {
         token: 'test-magic-token',
       });
 
-      expect(handler.canHandle(params)).toBe(true);
+      expect(handler.canHandle(params, mockConfig)).toBe(true);
     });
 
     it('should handle magic link parameters with magic_link_token', () => {
@@ -39,7 +39,7 @@ describe('MagicLinkFlowHandler', () => {
         magic_link_token: 'test-magic-token',
       });
 
-      expect(handler.canHandle(params)).toBe(true);
+      expect(handler.canHandle(params, mockConfig)).toBe(true);
     });
 
     it('should not handle authorization code parameters', () => {
@@ -47,7 +47,7 @@ describe('MagicLinkFlowHandler', () => {
         code: 'test-auth-code',
       });
 
-      expect(handler.canHandle(params)).toBe(false);
+      expect(handler.canHandle(params, mockConfig)).toBe(false);
     });
 
     it('should not handle parameters without token', () => {
@@ -55,7 +55,7 @@ describe('MagicLinkFlowHandler', () => {
         state: 'test-state',
       });
 
-      expect(handler.canHandle(params)).toBe(false);
+      expect(handler.canHandle(params, mockConfig)).toBe(false);
     });
   });
 
@@ -304,7 +304,7 @@ describe('MagicLinkLoginFlowHandler', () => {
         flow: 'login',
       });
 
-      expect(handler.canHandle(params)).toBe(true);
+      expect(handler.canHandle(params, mockConfig)).toBe(true);
     });
 
     it('should not handle magic link registration flow', () => {
@@ -313,7 +313,7 @@ describe('MagicLinkLoginFlowHandler', () => {
         flow: 'registration',
       });
 
-      expect(handler.canHandle(params)).toBe(false);
+      expect(handler.canHandle(params, mockConfig)).toBe(false);
     });
 
     it('should not handle without flow parameter', () => {
@@ -321,7 +321,7 @@ describe('MagicLinkLoginFlowHandler', () => {
         token: 'test-magic-token',
       });
 
-      expect(handler.canHandle(params)).toBe(false);
+      expect(handler.canHandle(params, mockConfig)).toBe(false);
     });
 
     it('should handle magic_link_token parameter', () => {
@@ -330,7 +330,7 @@ describe('MagicLinkLoginFlowHandler', () => {
         flow: 'login',
       });
 
-      expect(handler.canHandle(params)).toBe(true);
+      expect(handler.canHandle(params, mockConfig)).toBe(true);
     });
 
     it('should not handle without token parameter', () => {
@@ -338,7 +338,7 @@ describe('MagicLinkLoginFlowHandler', () => {
         flow: 'login',
       });
 
-      expect(handler.canHandle(params)).toBe(false);
+      expect(handler.canHandle(params, mockConfig)).toBe(false);
     });
   });
 
@@ -391,7 +391,7 @@ describe('MagicLinkRegistrationFlowHandler', () => {
         flow: 'registration',
       });
 
-      expect(handler.canHandle(params)).toBe(true);
+      expect(handler.canHandle(params, mockConfig)).toBe(true);
     });
 
     it('should not handle magic link login flow', () => {
@@ -400,7 +400,7 @@ describe('MagicLinkRegistrationFlowHandler', () => {
         flow: 'login',
       });
 
-      expect(handler.canHandle(params)).toBe(false);
+      expect(handler.canHandle(params, mockConfig)).toBe(false);
     });
 
     it('should not handle without flow parameter', () => {
@@ -408,7 +408,7 @@ describe('MagicLinkRegistrationFlowHandler', () => {
         token: 'test-magic-token',
       });
 
-      expect(handler.canHandle(params)).toBe(false);
+      expect(handler.canHandle(params, mockConfig)).toBe(false);
     });
 
     it('should handle token parameter', () => {
@@ -417,7 +417,7 @@ describe('MagicLinkRegistrationFlowHandler', () => {
         flow: 'registration',
       });
 
-      expect(handler.canHandle(params)).toBe(true);
+      expect(handler.canHandle(params, mockConfig)).toBe(true);
     });
 
     it('should not handle without token parameter', () => {
@@ -425,7 +425,7 @@ describe('MagicLinkRegistrationFlowHandler', () => {
         flow: 'registration',
       });
 
-      expect(handler.canHandle(params)).toBe(false);
+      expect(handler.canHandle(params, mockConfig)).toBe(false);
     });
   });
 

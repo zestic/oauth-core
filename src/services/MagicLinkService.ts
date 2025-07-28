@@ -55,8 +55,8 @@ export class MagicLinkService {
       // Build magic link URL
       const magicLinkUrl = this.buildMagicLinkUrl(magicLinkToken);
 
-      // Send magic link email
-      const emailResult = await this.adapters.email.sendMagicLink(
+      // Trigger server-side magic link sending via GraphQL
+      const graphqlResult = await this.adapters.graphql.sendMagicLinkMutation(
         input.email,
         magicLinkUrl,
         {
@@ -69,11 +69,11 @@ export class MagicLinkService {
         }
       );
 
-      if (!emailResult.success) {
+      if (!graphqlResult.success) {
         return {
           success: false,
-          message: emailResult.message || 'Failed to send magic link email',
-          code: 'EMAIL_SEND_FAILED'
+          message: graphqlResult.message || 'Failed to trigger magic link sending',
+          code: 'GRAPHQL_MUTATION_FAILED'
         };
       }
 

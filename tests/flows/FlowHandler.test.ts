@@ -1,9 +1,9 @@
-import { BaseFlowHandler, SimpleFlowHandler, FlowHandlerFactory } from '../../src/flows/FlowHandler';
+import { BaseCallbackFlowHandler, SimpleCallbackFlowHandler, FlowHandlerFactory } from '../../src/flows/BaseCallbackFlowHandler';
 import { OAuthConfig, OAuthAdapters, OAuthResult, OAuthError } from '../../src/types/OAuthTypes';
 import { createMockAdapters, createMockConfig } from '../mocks/adapters';
 
-// Concrete implementation for testing BaseFlowHandler
-class TestFlowHandler extends BaseFlowHandler {
+// Concrete implementation for testing BaseCallbackFlowHandler
+class TestCallbackFlowHandler extends BaseCallbackFlowHandler {
   readonly name = 'test_flow';
   readonly priority = 50;
 
@@ -28,13 +28,13 @@ class TestFlowHandler extends BaseFlowHandler {
   }
 }
 
-describe('BaseFlowHandler', () => {
-  let handler: TestFlowHandler;
+describe('BaseCallbackFlowHandler', () => {
+  let handler: TestCallbackFlowHandler;
   let mockAdapters: ReturnType<typeof createMockAdapters>;
   let mockConfig: ReturnType<typeof createMockConfig>;
 
   beforeEach(() => {
-    handler = new TestFlowHandler();
+    handler = new TestCallbackFlowHandler();
     mockAdapters = createMockAdapters();
     mockConfig = createMockConfig();
     
@@ -286,7 +286,7 @@ describe('BaseFlowHandler', () => {
   });
 });
 
-describe('SimpleFlowHandler', () => {
+describe('SimpleCallbackFlowHandler', () => {
   let mockAdapters: ReturnType<typeof createMockAdapters>;
   let mockConfig: ReturnType<typeof createMockConfig>;
 
@@ -301,7 +301,7 @@ describe('SimpleFlowHandler', () => {
       const handleFunc = jest.fn().mockResolvedValue({ success: true, accessToken: 'token' });
       const validateFunc = jest.fn().mockResolvedValue(true);
 
-      const handler = new SimpleFlowHandler(
+      const handler = new SimpleCallbackFlowHandler(
         'simple_test',
         25,
         canHandleFunc,
@@ -317,7 +317,7 @@ describe('SimpleFlowHandler', () => {
       const canHandleFunc = jest.fn().mockReturnValue(true);
       const handleFunc = jest.fn().mockResolvedValue({ success: true, accessToken: 'token' });
 
-      const handler = new SimpleFlowHandler('simple_test', 25, canHandleFunc, handleFunc);
+      const handler = new SimpleCallbackFlowHandler('simple_test', 25, canHandleFunc, handleFunc);
 
       expect(handler.name).toBe('simple_test');
       expect(handler.priority).toBe(25);
@@ -328,7 +328,7 @@ describe('SimpleFlowHandler', () => {
     it('should call provided canHandle function', () => {
       const canHandleFunc = jest.fn().mockReturnValue(true);
       const handleFunc = jest.fn();
-      const handler = new SimpleFlowHandler('test', 25, canHandleFunc, handleFunc);
+      const handler = new SimpleCallbackFlowHandler('test', 25, canHandleFunc, handleFunc);
       const params = new URLSearchParams({ test: 'value' });
 
       const result = handler.canHandle(params, mockConfig);
@@ -340,7 +340,7 @@ describe('SimpleFlowHandler', () => {
     it('should return false when canHandle function returns false', () => {
       const canHandleFunc = jest.fn().mockReturnValue(false);
       const handleFunc = jest.fn();
-      const handler = new SimpleFlowHandler('test', 25, canHandleFunc, handleFunc);
+      const handler = new SimpleCallbackFlowHandler('test', 25, canHandleFunc, handleFunc);
       const params = new URLSearchParams();
 
       const result = handler.canHandle(params, mockConfig);
@@ -355,7 +355,7 @@ describe('SimpleFlowHandler', () => {
       const expectedResult = { success: true, accessToken: 'test-token' };
       const canHandleFunc = jest.fn().mockReturnValue(true);
       const handleFunc = jest.fn().mockResolvedValue(expectedResult);
-      const handler = new SimpleFlowHandler('test', 25, canHandleFunc, handleFunc);
+      const handler = new SimpleCallbackFlowHandler('test', 25, canHandleFunc, handleFunc);
       const params = new URLSearchParams({ test: 'value' });
 
       const result = await handler.handle(params, mockAdapters, mockConfig);
@@ -368,7 +368,7 @@ describe('SimpleFlowHandler', () => {
       const error = new Error('Handle failed');
       const canHandleFunc = jest.fn().mockReturnValue(true);
       const handleFunc = jest.fn().mockRejectedValue(error);
-      const handler = new SimpleFlowHandler('test', 25, canHandleFunc, handleFunc);
+      const handler = new SimpleCallbackFlowHandler('test', 25, canHandleFunc, handleFunc);
       const params = new URLSearchParams();
 
       await expect(handler.handle(params, mockAdapters, mockConfig))
@@ -381,7 +381,7 @@ describe('SimpleFlowHandler', () => {
       const canHandleFunc = jest.fn().mockReturnValue(true);
       const handleFunc = jest.fn();
       const validateFunc = jest.fn().mockResolvedValue(true);
-      const handler = new SimpleFlowHandler('test', 25, canHandleFunc, handleFunc, validateFunc);
+      const handler = new SimpleCallbackFlowHandler('test', 25, canHandleFunc, handleFunc, validateFunc);
       const params = new URLSearchParams({ test: 'value' });
 
       const result = await handler.validate(params, mockConfig);
@@ -393,7 +393,7 @@ describe('SimpleFlowHandler', () => {
     it('should return true when no validate function provided', async () => {
       const canHandleFunc = jest.fn().mockReturnValue(true);
       const handleFunc = jest.fn();
-      const handler = new SimpleFlowHandler('test', 25, canHandleFunc, handleFunc);
+      const handler = new SimpleCallbackFlowHandler('test', 25, canHandleFunc, handleFunc);
       const params = new URLSearchParams();
 
       const result = await handler.validate(params, mockConfig);
@@ -405,7 +405,7 @@ describe('SimpleFlowHandler', () => {
       const canHandleFunc = jest.fn().mockReturnValue(true);
       const handleFunc = jest.fn();
       const validateFunc = jest.fn().mockResolvedValue(false);
-      const handler = new SimpleFlowHandler('test', 25, canHandleFunc, handleFunc, validateFunc);
+      const handler = new SimpleCallbackFlowHandler('test', 25, canHandleFunc, handleFunc, validateFunc);
       const params = new URLSearchParams();
 
       const result = await handler.validate(params, mockConfig);
@@ -418,7 +418,7 @@ describe('SimpleFlowHandler', () => {
       const canHandleFunc = jest.fn().mockReturnValue(true);
       const handleFunc = jest.fn();
       const validateFunc = jest.fn().mockRejectedValue(error);
-      const handler = new SimpleFlowHandler('test', 25, canHandleFunc, handleFunc, validateFunc);
+      const handler = new SimpleCallbackFlowHandler('test', 25, canHandleFunc, handleFunc, validateFunc);
       const params = new URLSearchParams();
 
       await expect(handler.validate(params, mockConfig))
@@ -452,7 +452,7 @@ describe('FlowHandlerFactory', () => {
 
       expect(handler.name).toBe('factory_test');
       expect(handler.priority).toBe(30);
-      expect(handler).toBeInstanceOf(SimpleFlowHandler);
+      expect(handler).toBeInstanceOf(SimpleCallbackFlowHandler);
     });
 
     it('should create handler without validate function', () => {
@@ -463,7 +463,7 @@ describe('FlowHandlerFactory', () => {
 
       expect(handler.name).toBe('factory_test');
       expect(handler.priority).toBe(30);
-      expect(handler).toBeInstanceOf(SimpleFlowHandler);
+      expect(handler).toBeInstanceOf(SimpleCallbackFlowHandler);
     });
 
     it('should create functional handler', async () => {

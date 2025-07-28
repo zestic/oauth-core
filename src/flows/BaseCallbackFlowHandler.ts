@@ -2,15 +2,15 @@
  * Base flow handler interface and abstract implementation
  */
 
-import { FlowHandler as IFlowHandler } from '../types/FlowTypes';
+import { CallbackFlowHandler as ICallbackFlowHandler } from '../types/CallbackFlowTypes';
 import { OAuthConfig, OAuthAdapters, OAuthResult, OAUTH_ERROR_CODES } from '../types/OAuthTypes';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { UrlParser } from '../utils/UrlParser';
 
 /**
- * Abstract base class for flow handlers
+ * Abstract base class for callback flow handlers
  */
-export abstract class BaseFlowHandler implements IFlowHandler {
+export abstract class BaseCallbackFlowHandler implements ICallbackFlowHandler {
   abstract readonly name: string;
   abstract readonly priority: number;
 
@@ -18,9 +18,24 @@ export abstract class BaseFlowHandler implements IFlowHandler {
   abstract handle(params: URLSearchParams, adapters: OAuthAdapters, config: OAuthConfig): Promise<OAuthResult>;
 
   /**
-   * Optional validation step - can be overridden by subclasses
+   * Default validation implementation - can be overridden by subclasses
+   * Provides common validation logic that all flows should have
    */
-  async validate?(params: URLSearchParams, config: OAuthConfig): Promise<boolean>;
+  async validate(params: URLSearchParams, config: OAuthConfig): Promise<boolean> {
+    try {
+      // Check for OAuth errors first (access_denied, invalid_request, etc.)
+      this.checkForOAuthError(params);
+
+      // Check if this flow is explicitly disabled in config
+      if (config.flows?.disabledFlows?.includes(this.name)) {
+        return false;
+      }
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   /**
    * Check for OAuth errors in parameters
@@ -128,7 +143,7 @@ export abstract class BaseFlowHandler implements IFlowHandler {
 /**
  * Simple flow handler implementation for basic flows
  */
-export class SimpleFlowHandler extends BaseFlowHandler {
+export class SimpleCallbackFlowHandler extends BaseCallbackFlowHandler {
   constructor(
     public readonly name: string,
     public readonly priority: number,
@@ -151,7 +166,8 @@ export class SimpleFlowHandler extends BaseFlowHandler {
     if (this.validateFunc) {
       return this.validateFunc(params, config);
     }
-    return true;
+    // If no custom validation function provided, use parent's default validation
+    return super.validate(params, config);
   }
 }
 
@@ -165,7 +181,7 @@ export class FlowHandlerFactory {
     canHandle: (params: URLSearchParams, config: OAuthConfig) => boolean,
     handle: (params: URLSearchParams, adapters: OAuthAdapters, config: OAuthConfig) => Promise<OAuthResult>,
     validate?: (params: URLSearchParams, config: OAuthConfig) => Promise<boolean>
-  ): IFlowHandler {
-    return new SimpleFlowHandler(name, priority, canHandle, handle, validate);
+  ): ICallbackFlowHandler {
+    return new SimpleCallbackFlowHandler(name, priority, canHandle, handle, validate);
   }
 }

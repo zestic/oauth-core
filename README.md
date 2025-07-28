@@ -5,13 +5,64 @@
 [![npm version](https://badge.fury.io/js/%40zestic%2Foauth-core.svg)](https://badge.fury.io/js/%40zestic%2Foauth-core)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Framework-agnostic OAuth authentication library with support for multiple OAuth flows including authorization code flow, magic link authentication, and custom flows.
+Framework-agnostic OAuth authentication library with support for multiple OAuth flows including authorization code flow, magic link authentication, and custom flows. This client-side library manages the complete OAuth lifecycle while integrating seamlessly with your server-side authentication system.
+
+## Architecture
+
+This library is designed as a **client-side OAuth manager** that handles:
+
+1. **PKCE Management**: Generates and stores PKCE challenge/verifier pairs for secure OAuth flows
+2. **State Management**: Generates and validates OAuth state parameters to prevent CSRF attacks
+3. **GraphQL Integration**: Provides mutations to send PKCE/state data to your server
+4. **Callback Handling**: Acts as the OAuth callback handler (framework-agnostic)
+5. **Token Management**: Exchanges authorization codes for tokens and manages refresh cycles
+6. **Storage Abstraction**: Uses adapters for different storage needs (localStorage, AsyncStorage, etc.)
+
+### Magic Link Flow
+
+The magic link authentication follows this secure server-client flow:
+
+```
+1. Client (this library) → GraphQL mutation → Server
+   { email, codeChallenge, codeChallengeMethod, state }
+
+2. Server processes, stores PKCE data, sends email
+
+3. User clicks email → Server validates → Server calls client callback
+   GET /oauth/callback?code=magic-code&state=original-state
+
+4. Client callback (this library) → Validates state → Exchanges code for tokens
+   POST /oauth/token { grant_type, code, code_verifier, client_id }
+
+5. Client (this library) → Manages token refresh cycle
+```
+
+### Framework Integration
+
+The library works with any JavaScript framework through its adapter pattern:
+
+- **Expo Router**: `app/oauth/callback/+api.ts` → calls this library
+- **React Router**: Route handler → calls this library
+- **Next.js**: API route → calls this library
+- **Any framework**: Implements callback endpoint → delegates to this library
+
+### Complete Authentication Lifecycle
+
+1. **Client generates PKCE challenge** and state parameters
+2. **Client sends GraphQL mutation** with user email and PKCE data
+3. **Server stores PKCE data** and sends magic link email
+4. **User clicks magic link** in email
+5. **Server validates magic link** and calls client callback with authorization code
+6. **Client validates state** parameter to prevent CSRF attacks
+7. **Client exchanges authorization code** for access/refresh tokens using PKCE verifier
+8. **Client manages token lifecycle** including automatic refresh
 
 ## Features
 
 - **Multiple OAuth Flows**: Authorization code flow, magic link authentication, and extensible custom flows
 - **PKCE Support**: Built-in PKCE (Proof Key for Code Exchange) implementation for enhanced security
 - **Framework Agnostic**: Works with any JavaScript/TypeScript framework through adapter pattern
+- **GraphQL Ready**: Built-in support for GraphQL mutations to trigger server-side actions
 - **Type Safe**: Full TypeScript support with comprehensive type definitions
 - **Extensible**: Plugin-based architecture for custom OAuth flows
 - **Well Tested**: Comprehensive test coverage with Jest
@@ -44,9 +95,11 @@ const config = {
 
 // Create adapters (implement these for your environment)
 const adapters = {
-  storage: new YourStorageAdapter(),
-  http: new YourHttpAdapter(),
-  pkce: new YourPKCEAdapter(),
+  storage: new YourStorageAdapter(),    // localStorage, AsyncStorage, etc.
+  http: new YourHttpAdapter(),          // fetch, axios, etc.
+  pkce: new YourPKCEAdapter(),          // PKCE challenge generation
+  user: new YourUserAdapter(),          // User registration/lookup
+  graphql: new YourGraphQLAdapter(),    // GraphQL mutations to your server
 };
 
 // Initialize OAuth core
@@ -77,12 +130,35 @@ const result = await oauth.handleCallback(params);
 
 ### Magic Link Flow
 
-Custom magic link authentication flow.
+Custom magic link authentication flow that integrates with your GraphQL server.
 
 ```typescript
-// Callback URL: https://yourapp.com/callback?token=magic_token&flow=login
+import { resolvers, createGraphQLContext } from '@zestic/oauth-core';
+
+// 1. Send magic link via GraphQL mutation
+const magicLinkResult = await resolvers.Mutation.sendMagicLink(
+  null,
+  {
+    input: {
+      email: 'user@example.com',
+      codeChallenge: 'generated-challenge',
+      codeChallengeMethod: 'S256',
+      state: 'secure-state',
+      redirectUri: 'https://yourapp.com/oauth/callback'
+    }
+  },
+  graphqlContext
+);
+
+// 2. User clicks email link, server calls your callback
+// Callback URL: https://yourapp.com/oauth/callback?code=magic_code&state=secure-state
 const params = new URLSearchParams(window.location.search);
 const result = await oauth.handleCallback(params);
+
+if (result.success) {
+  console.log('Magic link authentication successful');
+  console.log('Access token:', result.accessToken);
+}
 ```
 
 ### Custom Flows
@@ -90,9 +166,9 @@ const result = await oauth.handleCallback(params);
 Extend the library with custom OAuth flows:
 
 ```typescript
-import { BaseFlowHandler } from '@zestic/oauth-core';
+import { BaseCallbackFlowHandler } from '@zestic/oauth-core';
 
-class CustomFlowHandler extends BaseFlowHandler {
+class CustomFlowHandler extends BaseCallbackFlowHandler {
   readonly name = 'custom_flow';
   readonly priority = 10;
 
@@ -125,6 +201,16 @@ const oauth = createOAuthCore(config, adapters, {
   customFlows: [new CustomFlowHandler()], // Add custom flows
 });
 ```
+
+## Adapter Architecture
+
+The library uses an adapter pattern to integrate with different environments and services. Each adapter serves a specific purpose:
+
+- **StorageAdapter**: localStorage (web) vs AsyncStorage (React Native) vs custom storage
+- **HttpAdapter**: fetch vs axios vs custom HTTP client
+- **PKCEAdapter**: PKCE challenge/verifier generation
+- **UserAdapter**: User registration, lookup, and management
+- **GraphQLAdapter**: GraphQL mutations to trigger server-side actions (magic links, confirmations)
 
 ### Adapter Implementation
 
@@ -180,6 +266,169 @@ class FetchHttpAdapter implements HttpAdapter {
     };
   }
 }
+
+// GraphQL adapter example (for magic links and server communication)
+class GraphQLAdapter implements GraphQLAdapter {
+  constructor(private graphqlEndpoint: string) {}
+
+  async sendMagicLinkMutation(email: string, magicLinkUrl: string): Promise<GraphQLResult> {
+    const mutation = `
+      mutation SendMagicLink($input: SendMagicLinkInput!) {
+        sendMagicLink(input: $input) {
+          success
+          message
+          code
+        }
+      }
+    `;
+
+    const response = await fetch(this.graphqlEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: mutation,
+        variables: {
+          input: { email, magicLinkUrl }
+        }
+      })
+    });
+
+    const result = await response.json();
+    return result.data.sendMagicLink;
+  }
+
+  async sendRegistrationConfirmationMutation(email: string): Promise<GraphQLResult> {
+    // Similar GraphQL mutation for registration confirmation
+    // Your server handles the actual email sending
+    return { success: true, message: 'Confirmation triggered' };
+  }
+}
+
+// User adapter example (for user management)
+class UserAdapter implements UserAdapter {
+  async registerUser(email: string, additionalData: Record<string, unknown>): Promise<UserRegistrationResult> {
+    // Call your user registration API
+    const response = await fetch('/api/users/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, ...additionalData })
+    });
+
+    const result = await response.json();
+    return {
+      success: response.ok,
+      userId: result.userId,
+      message: result.message
+    };
+  }
+
+  async userExists(email: string): Promise<boolean> {
+    const response = await fetch(`/api/users/exists?email=${encodeURIComponent(email)}`);
+    const result = await response.json();
+    return result.exists;
+  }
+
+  async getUserByEmail(email: string): Promise<UserInfo | null> {
+    const response = await fetch(`/api/users/by-email?email=${encodeURIComponent(email)}`);
+    if (!response.ok) return null;
+    return response.json();
+  }
+}
+```
+
+## Server-Side Integration
+
+This client-side library requires server-side components to handle:
+
+### GraphQL Schema Requirements
+
+Your GraphQL server should implement these mutations:
+
+```graphql
+type Mutation {
+  # Magic link authentication
+  sendMagicLink(input: SendMagicLinkInput!): MagicLinkResponse!
+
+  # User registration
+  register(input: RegistrationInput!): RegistrationResponse!
+}
+
+input SendMagicLinkInput {
+  email: String!
+  codeChallenge: String!
+  codeChallengeMethod: String!
+  state: String!
+  redirectUri: String!
+}
+
+input RegistrationInput {
+  email: String!
+  codeChallenge: String!
+  codeChallengeMethod: String!
+  state: String!
+  redirectUri: String!
+  additionalData: JSON
+}
+
+type MagicLinkResponse {
+  success: Boolean!
+  message: String
+  code: String
+}
+
+type RegistrationResponse {
+  success: Boolean!
+  message: String
+  code: String
+}
+```
+
+### Server-Side Flow
+
+1. **Receive GraphQL mutation** with PKCE data from client
+2. **Store PKCE challenge and state** with unique token
+3. **Send email** with magic link containing the token
+4. **Handle magic link click** by looking up PKCE data
+5. **Call client callback** with authorization code and state
+6. **Client exchanges code** for access/refresh tokens using PKCE verifier
+
+### Framework Integration Examples
+
+#### Next.js API Route
+
+```typescript
+// pages/api/oauth/callback.ts or app/api/oauth/callback/route.ts
+import { OAuthCore } from '@zestic/oauth-core';
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const params = url.searchParams;
+
+  const result = await oauth.handleCallback(params);
+
+  if (result.success) {
+    // Redirect to success page
+    return Response.redirect('/dashboard');
+  } else {
+    // Handle error
+    return Response.redirect('/login?error=oauth_failed');
+  }
+}
+```
+
+#### Expo Router API Route
+
+```typescript
+// app/oauth/callback/+api.ts
+import { ExpoRequest, ExpoResponse } from 'expo-router/server';
+import { OAuthCore } from '@zestic/oauth-core';
+
+export async function GET(request: ExpoRequest): Promise<ExpoResponse> {
+  const url = new URL(request.url);
+  const result = await oauth.handleCallback(url.searchParams);
+
+  return Response.json(result);
+}
 ```
 
 ## API Reference
@@ -207,6 +456,37 @@ Built-in flow handlers:
 
 - `AuthorizationCodeFlowHandler`: Standard OAuth 2.0 authorization code flow
 - `MagicLinkFlowHandler`: Magic link authentication flow
+
+## Security Considerations
+
+This library implements several security best practices:
+
+### PKCE (Proof Key for Code Exchange)
+
+- **Prevents authorization code interception attacks**
+- **Generates cryptographically secure code challenges**
+- **Uses SHA256 hashing with base64url encoding**
+- **Code verifier never leaves the client**
+
+### State Parameter Validation
+
+- **Prevents CSRF attacks** by validating state parameters
+- **Cryptographically secure state generation**
+- **Automatic state cleanup** after successful validation
+
+### Token Management
+
+- **Secure token storage** through adapter pattern
+- **Automatic token refresh** before expiration
+- **Proper token cleanup** on logout
+- **No sensitive data in URLs** (tokens only in secure storage)
+
+### Magic Link Security
+
+- **Server-side PKCE storage** prevents client-side tampering
+- **Time-limited magic links** (configurable expiration)
+- **One-time use tokens** prevent replay attacks
+- **State validation** ensures request authenticity
 
 ## Testing
 
@@ -241,6 +521,15 @@ Run the full CI pipeline locally:
 ```bash
 yarn ci
 ```
+
+### Future Improvements:
+
+* Add client secret validation in AuthorizationCodeFlowHandler
+* Implement refresh token binding to client IP/user agent
+* Add scope validation during refresh operations
+* Test refresh token revocation after single use
+The test suite would benefit from additional coverage of OAuth 2.1 security recommendations while maintaining its strong foundation in RFC 6749 requirements.
+
 
 ### Contributing
 

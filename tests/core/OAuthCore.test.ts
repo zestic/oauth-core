@@ -20,37 +20,36 @@ describe('OAuthCore', () => {
   describe('initialization', () => {
     it('should initialize with default flow handlers', () => {
       const flows = oauthCore.getRegisteredFlows();
-      expect(flows).toHaveLength(2);
-      expect(flows.map(f => f.name)).toContain('authorization_code');
+      expect(flows).toHaveLength(1);
       expect(flows.map(f => f.name)).toContain('magic_link');
     });
 
     it('should initialize with custom flow configuration', () => {
       const customCore = new OAuthCore(mockConfig, mockAdapters, {
-        enabledFlows: ['authorization_code'],
+        enabledFlows: ['magic_link'],
       });
 
       const flows = customCore.getRegisteredFlows();
       expect(flows).toHaveLength(1);
-      expect(flows[0]?.name).toBe('authorization_code');
+      expect(flows[0]?.name).toBe('magic_link');
     });
 
     it('should throw error if no flows are enabled', () => {
       expect(() => {
         new OAuthCore(mockConfig, mockAdapters, {
-          disabledFlows: ['authorization_code', 'magic_link'],
+          disabledFlows: ['magic_link'],
         });
       }).toThrow(OAuthError);
     });
 
     it('should handle disabled flows configuration', () => {
       const customCore = new OAuthCore(mockConfig, mockAdapters, {
-        disabledFlows: ['magic_link'],
+        disabledFlows: [],
       });
 
       const flows = customCore.getRegisteredFlows();
       expect(flows).toHaveLength(1);
-      expect(flows[0]?.name).toBe('authorization_code');
+      expect(flows[0]?.name).toBe('magic_link');
     });
 
     it('should handle empty enabledFlows configuration', () => {
@@ -67,6 +66,7 @@ describe('OAuthCore', () => {
         priority: 15,
         canHandle: () => true,
         handle: async () => ({ success: true }),
+        validate: async () => true,
       };
 
       const customCore = new OAuthCore(mockConfig, mockAdapters, {
@@ -83,6 +83,7 @@ describe('OAuthCore', () => {
         priority: 15,
         canHandle: () => true,
         handle: async () => ({ success: true }),
+        validate: async () => true,
       };
 
       const customCore = new OAuthCore(mockConfig, mockAdapters, {
@@ -111,24 +112,7 @@ describe('OAuthCore', () => {
       });
     });
 
-    it('should handle authorization code flow', async () => {
-      // Setup PKCE data in storage
-      await mockAdapters.storage.setItem('pkce_code_verifier', 'test-code-verifier');
-      // Setup state in storage for validation
-      await mockAdapters.storage.setItem('oauth_state', 'test-state');
-      await mockAdapters.storage.setItem('oauth_state_expiry', (Date.now() + 60000).toString());
 
-      const params = new URLSearchParams({
-        code: 'test-auth-code',
-        state: 'test-state',
-      });
-
-      const result = await oauthCore.handleCallback(params);
-
-      expect(result.success).toBe(true);
-      expect(result.accessToken).toBe('test-access-token');
-      expect(result.refreshToken).toBe('test-refresh-token');
-    });
 
     it('should handle magic link flow', async () => {
       const params = new URLSearchParams({
@@ -209,6 +193,7 @@ describe('OAuthCore', () => {
         name: 'error_flow',
         priority: 10,
         canHandle: () => true,
+        validate: async () => true,
         handle: async () => {
           throw new Error('Generic error');
         },
@@ -227,6 +212,7 @@ describe('OAuthCore', () => {
         name: 'string_error_flow',
         priority: 10,
         canHandle: () => true,
+        validate: async () => true,
         handle: async () => {
           throw 'String error';
         },
@@ -253,16 +239,7 @@ describe('OAuthCore', () => {
     });
 
     it('should handle string parameters in callback', async () => {
-      const paramString = 'code=test-code&state=test-state';
-
-      // Mock state validation - need to set both state and expiry
-      await mockAdapters.storage.setItem('oauth_state', 'test-state');
-      await mockAdapters.storage.setItem('oauth_state_expiry', (Date.now() + 300000).toString()); // 5 minutes from now
-
-      // Mock PKCE data for authorization code flow
-      await mockAdapters.storage.setItem('pkce_code_verifier', 'test-verifier');
-      await mockAdapters.storage.setItem('pkce_code_challenge', 'test-challenge');
-      await mockAdapters.storage.setItem('pkce_code_challenge_method', 'S256');
+      const paramString = 'token=test-magic-token&flow=login';
 
       const result = await oauthCore.handleCallback(paramString);
       expect(result.success).toBe(true);
@@ -460,6 +437,7 @@ describe('OAuthCore', () => {
         name: 'custom_flow',
         priority: 10,
         canHandle: () => true,
+        validate: async () => true,
         handle: async () => ({ success: true }),
       };
 
@@ -477,11 +455,11 @@ describe('OAuthCore', () => {
     });
 
     it('should get compatible handlers', () => {
-      const params = new URLSearchParams({ code: 'test-code' });
+      const params = new URLSearchParams({ token: 'test-magic-token' });
       const handlers = oauthCore.getCompatibleHandlers(params);
 
       expect(handlers).toHaveLength(1);
-      expect(handlers[0]?.name).toBe('authorization_code');
+      expect(handlers[0]?.name).toBe('magic_link');
     });
   });
 });

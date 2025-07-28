@@ -44,12 +44,12 @@ export const createE2EAdapters = (): ExtendedOAuthAdapters => {
       userExists: jest.fn().mockResolvedValue(false),
       getUserByEmail: jest.fn().mockResolvedValue(null)
     },
-    email: {
-      sendMagicLink: jest.fn().mockResolvedValue({
+    graphql: {
+      sendMagicLinkMutation: jest.fn().mockResolvedValue({
         success: true,
         messageId: 'msg-123'
       }),
-      sendRegistrationConfirmation: jest.fn().mockResolvedValue({
+      sendRegistrationConfirmationMutation: jest.fn().mockResolvedValue({
         success: true,
         messageId: 'msg-456'
       })

@@ -4,32 +4,27 @@
 
 import { OAuthConfig, OAuthAdapters, OAuthResult } from './OAuthTypes';
 
-export interface FlowHandler {
+export interface CallbackFlowHandler {
   readonly name: string;
   readonly priority: number;
-  
+
   canHandle(params: URLSearchParams, config: OAuthConfig): boolean;
   handle(params: URLSearchParams, adapters: OAuthAdapters, config: OAuthConfig): Promise<OAuthResult>;
-  validate?(params: URLSearchParams, config: OAuthConfig): Promise<boolean>;
+  validate(params: URLSearchParams, config: OAuthConfig): Promise<boolean>;
 }
 
-export interface FlowDetectionResult {
-  handler: FlowHandler;
+export interface CallbackFlowDetectionResult {
+  handler: CallbackFlowHandler;
   confidence: number;
   reason: string;
 }
 
-export interface FlowRegistryOptions {
+export interface CallbackFlowRegistryOptions {
   allowDuplicates?: boolean;
   defaultPriority?: number;
 }
 
-export interface AuthorizationCodeFlowParams {
-  code: string;
-  state?: string;
-  error?: string;
-  error_description?: string;
-}
+
 
 export interface MagicLinkFlowParams {
   token?: string;
@@ -70,7 +65,7 @@ export interface FlowResult extends OAuthResult {
 export type FlowParameterValidator = (params: URLSearchParams) => boolean;
 export type FlowParameterExtractor<T> = (params: URLSearchParams) => T;
 
-export interface FlowHandlerConfig {
+export interface CallbackFlowHandlerConfig {
   name: string;
   priority: number;
   validator: FlowParameterValidator;
@@ -87,7 +82,6 @@ export const FLOW_PRIORITIES = {
 } as const;
 
 export const BUILT_IN_FLOWS = {
-  AUTHORIZATION_CODE: 'authorization_code',
   MAGIC_LINK: 'magic_link',
   DEVICE_CODE: 'device_code',
   SAML_ASSERTION: 'saml_assertion',

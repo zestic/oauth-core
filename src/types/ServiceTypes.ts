@@ -85,24 +85,24 @@ export interface UserInfo {
 }
 
 /**
- * Adapter for email operations
+ * Adapter for GraphQL operations to trigger server-side actions
  */
-export interface EmailAdapter {
+export interface GraphQLAdapter {
   /**
-   * Send a magic link email to the specified address
+   * Trigger server-side magic link sending via GraphQL mutation
    */
-  sendMagicLink(email: string, magicLinkUrl: string, options?: EmailOptions): Promise<EmailResult>;
-  
+  sendMagicLinkMutation(email: string, magicLinkUrl: string, options?: GraphQLOptions): Promise<GraphQLResult>;
+
   /**
-   * Send a registration confirmation email
+   * Trigger server-side registration confirmation via GraphQL mutation
    */
-  sendRegistrationConfirmation(email: string, options?: EmailOptions): Promise<EmailResult>;
+  sendRegistrationConfirmationMutation(email: string, options?: GraphQLOptions): Promise<GraphQLResult>;
 }
 
 /**
- * Options for email sending
+ * Options for GraphQL mutations
  */
-export interface EmailOptions {
+export interface GraphQLOptions {
   subject?: string;
   templateData?: Record<string, unknown>;
   fromAddress?: string;
@@ -110,9 +110,9 @@ export interface EmailOptions {
 }
 
 /**
- * Result of email sending operation
+ * Result of GraphQL mutation operation
  */
-export interface EmailResult {
+export interface GraphQLResult {
   success: boolean;
   messageId?: string;
   message?: string;
@@ -150,7 +150,7 @@ export interface ExtendedOAuthAdapters {
   http: import('./OAuthTypes').HttpAdapter;
   pkce: import('./OAuthTypes').PKCEAdapter;
   user: UserAdapter;
-  email: EmailAdapter;
+  graphql: GraphQLAdapter;
 }
 
 /**

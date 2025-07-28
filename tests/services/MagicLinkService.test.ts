@@ -4,7 +4,7 @@ import type {
   ExtendedOAuthAdapters,
   SendMagicLinkInput,
   MagicLinkConfig,
-  EmailResult,
+  GraphQLResult,
   MagicLinkToken
 } from '../../src/types/ServiceTypes';
 // Mock extended adapters
@@ -63,10 +63,10 @@ describe('MagicLinkService', () => {
 
     // Setup default mocks
     (mockAdapters.user.userExists as jest.Mock).mockResolvedValue(true);
-    (mockAdapters.email.sendMagicLink as jest.Mock).mockResolvedValue({
+    (mockAdapters.graphql.sendMagicLinkMutation as jest.Mock).mockResolvedValue({
       success: true,
       messageId: 'msg-123'
-    } as EmailResult);
+    } as GraphQLResult);
     
     // Mock PKCE adapter to return predictable tokens
     (mockAdapters.pkce.generateCodeChallenge as jest.Mock).mockResolvedValue({
@@ -105,8 +105,8 @@ describe('MagicLinkService', () => {
         'mock-verifier-token'
       );
       
-      // Verify email sending
-      expect(mockAdapters.email.sendMagicLink).toHaveBeenCalledWith(
+      // Verify GraphQL mutation was triggered
+      expect(mockAdapters.graphql.sendMagicLinkMutation).toHaveBeenCalledWith(
         'test@example.com',
         expect.stringContaining('https://example.com/auth/callback'),
         expect.objectContaining({
@@ -125,29 +125,29 @@ describe('MagicLinkService', () => {
       const result = await service.sendMagicLink(validInput);
 
       expect(result.success).toBe(true);
-      expect(mockAdapters.email.sendMagicLink).toHaveBeenCalled();
+      expect(mockAdapters.graphql.sendMagicLinkMutation).toHaveBeenCalled();
     });
 
-    it('should return error if email sending fails', async () => {
-      (mockAdapters.email.sendMagicLink as jest.Mock).mockResolvedValue({
+    it('should return error if GraphQL mutation fails', async () => {
+      (mockAdapters.graphql.sendMagicLinkMutation as jest.Mock).mockResolvedValue({
         success: false,
-        message: 'Email service unavailable'
-      } as EmailResult);
+        message: 'GraphQL service unavailable'
+      } as GraphQLResult);
 
       const result = await service.sendMagicLink(validInput);
 
       expect(result).toEqual({
         success: false,
-        message: 'Email service unavailable',
-        code: 'EMAIL_SEND_FAILED'
+        message: 'GraphQL service unavailable',
+        code: 'GRAPHQL_MUTATION_FAILED'
       });
     });
 
     it('should build correct magic link URL', async () => {
       await service.sendMagicLink(validInput);
 
-      const emailCall = (mockAdapters.email.sendMagicLink as jest.Mock).mock.calls[0];
-      const magicLinkUrl = emailCall[1];
+      const graphqlCall = (mockAdapters.graphql.sendMagicLinkMutation as jest.Mock).mock.calls[0];
+      const magicLinkUrl = graphqlCall[1];
 
       expect(magicLinkUrl).toContain('https://example.com/auth/callback');
       expect(magicLinkUrl).toContain('magic_link_token=mock-verifier-token');
@@ -343,8 +343,8 @@ describe('MagicLinkService', () => {
       
       await serviceWithoutCustomParams.sendMagicLink(validInput);
 
-      const emailCall = (mockAdapters.email.sendMagicLink as jest.Mock).mock.calls[0];
-      const magicLinkUrl = emailCall[1];
+      const graphqlCall = (mockAdapters.graphql.sendMagicLinkMutation as jest.Mock).mock.calls[0];
+      const magicLinkUrl = graphqlCall[1];
 
       expect(magicLinkUrl).not.toContain('source=test');
     });

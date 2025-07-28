@@ -7,9 +7,9 @@ import type {
   ExtendedOAuthAdapters,
   MagicLinkConfig,
   UserAdapter,
-  EmailAdapter,
+  GraphQLAdapter,
   UserRegistrationResult,
-  EmailResult,
+  GraphQLResult,
   UserInfo
 } from '../types/ServiceTypes';
 import type {
@@ -61,28 +61,28 @@ class ExampleUserAdapter implements UserAdapter {
 }
 
 /**
- * Example implementation of EmailAdapter
+ * Example implementation of GraphQLAdapter
  */
-class ExampleEmailAdapter implements EmailAdapter {
-  async sendMagicLink(email: string, magicLinkUrl: string): Promise<EmailResult> {
-    // In a real implementation, you would integrate with an email service
-    // like SendGrid, AWS SES, Mailgun, etc.
-    console.log(`Sending magic link to ${email}: ${magicLinkUrl}`);
-    
+class ExampleGraphQLAdapter implements GraphQLAdapter {
+  async sendMagicLinkMutation(email: string, magicLinkUrl: string): Promise<GraphQLResult> {
+    // In a real implementation, you would make a GraphQL mutation to your server
+    // which would then handle sending the email via your email service
+    console.log(`Triggering magic link sending for ${email}: ${magicLinkUrl}`);
+
     return {
       success: true,
       messageId: `msg_${Date.now()}`,
-      message: 'Magic link sent successfully'
+      message: 'Magic link mutation triggered successfully'
     };
   }
 
-  async sendRegistrationConfirmation(email: string): Promise<EmailResult> {
-    console.log(`Sending registration confirmation to ${email}`);
-    
+  async sendRegistrationConfirmationMutation(email: string): Promise<GraphQLResult> {
+    console.log(`Triggering registration confirmation for ${email}`);
+
     return {
       success: true,
       messageId: `msg_${Date.now()}`,
-      message: 'Registration confirmation sent successfully'
+      message: 'Registration confirmation mutation triggered successfully'
     };
   }
 }
@@ -183,7 +183,7 @@ export function createExampleAdapters(): ExtendedOAuthAdapters {
     http: new ExampleHttpAdapter(),
     pkce: new ExamplePKCEAdapter(),
     user: new ExampleUserAdapter(),
-    email: new ExampleEmailAdapter()
+    graphql: new ExampleGraphQLAdapter()
   };
 }
 
