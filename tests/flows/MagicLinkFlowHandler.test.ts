@@ -1,5 +1,5 @@
 import { BaseMagicLinkFlowHandler } from '../../src/flows/BaseMagicLinkFlowHandler';
-import { MagicLinkLoginFlowHandler } from '../../src/flows/MagicLinkLoginFlowHandler';
+import { MagicLinkLoginFlowHandler, createMagicLinkLoginFlowHandler } from '../../src/flows/MagicLinkLoginFlowHandler';
 import { MagicLinkVerifyFlowHandler } from '../../src/flows/MagicLinkVerifyFlowHandler';
 import { OAuthError } from '../../src/types/OAuthTypes';
 import { createMockAdapters, createMockConfig, MockHttpAdapter } from '../mocks/adapters';
@@ -316,6 +316,22 @@ describe('MagicLinkLoginFlowHandler', () => {
       expect(handler.canHandle(params, mockConfig)).toBe(false);
     });
 
+    it('should not handle when flow is disabled', () => {
+      const configWithDisabledFlows = {
+        ...mockConfig,
+        flows: {
+          disabledFlows: ['magic_link_login']
+        }
+      };
+
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+        flow: 'login',
+      });
+
+      expect(handler.canHandle(params, configWithDisabledFlows)).toBe(false);
+    });
+
 
 
     it('should not handle without token parameter', () => {
@@ -354,6 +370,14 @@ describe('MagicLinkLoginFlowHandler', () => {
     it('should have correct name and priority', () => {
       expect(handler.name).toBe('magic_link_login');
       expect(handler.priority).toBe(25); // FLOW_PRIORITIES.HIGH
+    });
+  });
+
+  describe('factory function', () => {
+    it('should create MagicLinkLoginFlowHandler instance', () => {
+      const createdHandler = createMagicLinkLoginFlowHandler();
+      expect(createdHandler).toBeInstanceOf(MagicLinkLoginFlowHandler);
+      expect(createdHandler.name).toBe('magic_link_login');
     });
   });
 });
