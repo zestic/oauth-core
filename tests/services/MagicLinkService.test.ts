@@ -2,7 +2,7 @@
  * Unit tests for MagicLinkService
  */
 
-import { MagicLinkService } from '../../src/services/MagicLinkService';
+import { MagicLinkService, createMagicLinkService } from '../../src/services/MagicLinkService';
 import type {
   ExtendedOAuthAdapters,
   MagicLinkConfig,
@@ -367,5 +367,163 @@ describe('MagicLinkService', () => {
       // This tests the internal validation logic
       expect(() => service.sendMagicLink(input)).not.toThrow();
     });
+  });
+
+  describe('validateMagicLinkToken', () => {
+    it('should validate a valid token', async () => {
+      const token = 'valid-token';
+      const tokenData = {
+        token,
+        email: 'test@example.com',
+        codeChallenge: 'test-challenge',
+        codeChallengeMethod: 'S256',
+        redirectUri: 'https://example.com/callback',
+        state: 'test-state',
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes from now
+      };
+
+      adapters.storage.getItem = jest.fn().mockResolvedValue(JSON.stringify(tokenData));
+
+      const result = await service.validateMagicLinkToken(token);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBeDefined();
+      expect(result.data?.email).toBe('test@example.com');
+      expect(adapters.storage.getItem).toHaveBeenCalledWith(`magic_link_token:${token}`);
+    });
+
+    it('should handle invalid token', async () => {
+      const token = 'invalid-token';
+      adapters.storage.getItem = jest.fn().mockResolvedValue(null);
+
+      const result = await service.validateMagicLinkToken(token);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Invalid or expired magic link token');
+      expect(result.code).toBe('INVALID_TOKEN');
+    });
+
+    it('should handle expired token', async () => {
+      const token = 'expired-token';
+      const tokenData = {
+        token,
+        email: 'test@example.com',
+        codeChallenge: 'test-challenge',
+        codeChallengeMethod: 'S256',
+        redirectUri: 'https://example.com/callback',
+        state: 'test-state',
+        expiresAt: new Date(Date.now() - 10 * 60 * 1000) // 10 minutes ago
+      };
+
+      adapters.storage.getItem = jest.fn().mockResolvedValue(JSON.stringify(tokenData));
+      adapters.storage.removeItem = jest.fn().mockResolvedValue(undefined);
+
+      const result = await service.validateMagicLinkToken(token);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Magic link token has expired');
+      expect(result.code).toBe('TOKEN_EXPIRED');
+      expect(adapters.storage.removeItem).toHaveBeenCalledWith(`magic_link_token:${token}`);
+      expect(adapters.storage.removeItem).toHaveBeenCalledWith(`magic_link_email:${tokenData.email}`);
+    });
+
+    it('should handle storage errors', async () => {
+      const token = 'error-token';
+      adapters.storage.getItem = jest.fn().mockRejectedValue(new Error('Storage error'));
+
+      const result = await service.validateMagicLinkToken(token);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Storage error');
+    });
+
+    it('should handle non-Error exceptions', async () => {
+      const token = 'error-token';
+      adapters.storage.getItem = jest.fn().mockRejectedValue('String error');
+
+      const result = await service.validateMagicLinkToken(token);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('String error');
+    });
+  });
+
+  describe('email validation edge cases', () => {
+    it('should handle email length validation', async () => {
+      const longEmail = 'a'.repeat(250) + '@example.com'; // > 254 characters
+      const input: SendMagicLinkInput = {
+        email: longEmail,
+        codeChallenge: 'test-challenge',
+        codeChallengeMethod: 'S256',
+        redirectUri: 'https://app.example.com/callback',
+        state: 'test-state'
+      };
+
+      await expect(service.sendMagicLink(input)).rejects.toThrow('Invalid email format');
+    });
+  });
+
+  describe('custom parameters', () => {
+    it('should include custom parameters in magic link URL', async () => {
+      const customConfig = {
+        baseUrl: 'https://app.example.com',
+        tokenEndpoint: 'https://auth.example.com/token',
+        expirationMinutes: 15,
+        customParams: {
+          utm_source: 'email',
+          utm_campaign: 'magic_link'
+        }
+      };
+
+      const serviceWithCustomParams = new MagicLinkService(adapters, customConfig);
+
+      const input: SendMagicLinkInput = {
+        email: 'test@example.com',
+        codeChallenge: 'test-challenge',
+        codeChallengeMethod: 'S256',
+        redirectUri: 'https://app.example.com/callback',
+        state: 'test-state'
+      };
+
+      (adapters.graphql.sendMagicLinkMutation as jest.Mock).mockResolvedValue({
+        success: true,
+        message: 'Magic link sent successfully'
+      });
+
+      const result = await serviceWithCustomParams.sendMagicLink(input);
+
+      expect(result.success).toBe(true);
+
+      // Check that the GraphQL mutation was called with a URL containing custom params
+      const callArgs = (adapters.graphql.sendMagicLinkMutation as jest.Mock).mock.calls[0];
+      const magicLinkUrl = callArgs[1]; // Second argument is the magic link URL
+      expect(magicLinkUrl).toContain('utm_source=email');
+      expect(magicLinkUrl).toContain('utm_campaign=magic_link');
+    });
+  });
+});
+
+describe('createMagicLinkService factory function', () => {
+  it('should create MagicLinkService instance', () => {
+    const mockAdapters = {
+      storage: {
+        getItem: jest.fn(),
+        setItem: jest.fn(),
+        removeItem: jest.fn()
+      },
+      graphql: {
+        sendMagicLinkMutation: jest.fn()
+      }
+    } as any;
+
+    const mockConfig = {
+      baseUrl: 'https://app.example.com',
+      tokenEndpoint: 'https://auth.example.com/token',
+      expirationMinutes: 15
+    };
+
+    const service = createMagicLinkService(mockAdapters, mockConfig);
+
+    expect(service).toBeInstanceOf(MagicLinkService);
   });
 });

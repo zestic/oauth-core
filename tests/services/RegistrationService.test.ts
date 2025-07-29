@@ -2,7 +2,7 @@
  * Unit tests for RegistrationService
  */
 
-import { RegistrationService } from '../../src/services/RegistrationService';
+import { RegistrationService, createRegistrationService } from '../../src/services/RegistrationService';
 import type {
   ExtendedOAuthAdapters,
   RegistrationInput,
@@ -361,5 +361,144 @@ describe('RegistrationService', () => {
       // This tests the internal validation logic
       expect(() => service.register(input)).not.toThrow();
     });
+  });
+
+  describe('user already exists scenario', () => {
+    it('should handle user already exists', async () => {
+      const input: RegistrationInput = {
+        email: 'existing@example.com',
+        additionalData: { firstName: 'John', lastName: 'Doe' },
+        codeChallenge: 'test-challenge',
+        codeChallengeMethod: 'S256',
+        redirectUri: 'https://app.example.com/callback',
+        state: 'test-state'
+      };
+
+      adapters.user.userExists = jest.fn().mockResolvedValue(true);
+
+      const result = await service.register(input);
+
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('User already exists with this email address');
+      expect(result.code).toBe('USER_EXISTS');
+      expect(adapters.user.userExists).toHaveBeenCalledWith(input.email);
+    });
+  });
+
+
+
+  describe('validation edge cases', () => {
+    it('should handle missing codeChallengeMethod', async () => {
+      const input = {
+        email: 'test@example.com',
+        additionalData: { firstName: 'John', lastName: 'Doe' },
+        codeChallenge: 'test-challenge',
+        codeChallengeMethod: '', // Empty string to trigger validation
+        redirectUri: 'https://app.example.com/callback',
+        state: 'test-state'
+      } as RegistrationInput;
+
+      await expect(service.register(input)).rejects.toThrow();
+    });
+
+    it('should handle email length validation', async () => {
+      const longEmail = 'a'.repeat(250) + '@example.com'; // > 254 characters
+      const input: RegistrationInput = {
+        email: longEmail,
+        additionalData: { firstName: 'John', lastName: 'Doe' },
+        codeChallenge: 'test-challenge',
+        codeChallengeMethod: 'S256',
+        redirectUri: 'https://app.example.com/callback',
+        state: 'test-state'
+      };
+
+      await expect(service.register(input)).rejects.toThrow();
+    });
+
+    it('should handle invalid redirect URI format', async () => {
+      const input: RegistrationInput = {
+        email: 'test@example.com',
+        additionalData: { firstName: 'John', lastName: 'Doe' },
+        codeChallenge: 'test-challenge',
+        codeChallengeMethod: 'S256',
+        redirectUri: 'invalid-uri',
+        state: 'test-state'
+      };
+
+      await expect(service.register(input)).rejects.toThrow();
+    });
+  });
+
+  describe('getRegistrationStatus', () => {
+    it('should return user exists when user found', async () => {
+      const email = 'existing@example.com';
+      const mockUser = { id: '123', email };
+
+      adapters.user.userExists = jest.fn().mockResolvedValue(true);
+      adapters.user.getUserByEmail = jest.fn().mockResolvedValue(mockUser);
+
+      const result = await service.getRegistrationStatus(email);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.exists).toBe(true);
+      expect(result.data?.user).toEqual(mockUser);
+      expect(result.message).toBe('User found');
+    });
+
+    it('should return user not exists when user not found', async () => {
+      const email = 'nonexistent@example.com';
+
+      adapters.user.userExists = jest.fn().mockResolvedValue(false);
+
+      const result = await service.getRegistrationStatus(email);
+
+      expect(result.success).toBe(true);
+      expect(result.data?.exists).toBe(false);
+      expect(result.data?.user).toBeUndefined();
+      expect(result.message).toBe('User not found');
+    });
+
+    it('should handle errors in getRegistrationStatus', async () => {
+      const email = 'error@example.com';
+
+      adapters.user.userExists = jest.fn().mockRejectedValue(new Error('Database error'));
+
+      const result = await service.getRegistrationStatus(email);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Database error');
+      expect(result.message).toBe('Failed to check registration status');
+    });
+
+    it('should handle non-Error exceptions in getRegistrationStatus', async () => {
+      const email = 'error@example.com';
+
+      adapters.user.userExists = jest.fn().mockRejectedValue('String error');
+
+      const result = await service.getRegistrationStatus(email);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('String error');
+      expect(result.message).toBe('Failed to check registration status');
+    });
+  });
+});
+
+describe('createRegistrationService factory function', () => {
+  it('should create RegistrationService instance', () => {
+    const mockAdapters = {
+      user: {
+        userExists: jest.fn(),
+        createUser: jest.fn(),
+        getUserByEmail: jest.fn()
+      },
+      graphql: {
+        registrationConfirmationMutation: jest.fn()
+      }
+    } as any;
+
+    const service = createRegistrationService(mockAdapters);
+
+    expect(service).toBeInstanceOf(RegistrationService);
   });
 });
