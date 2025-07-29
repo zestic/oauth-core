@@ -237,4 +237,134 @@ describe('CallbackFlowRegistry', () => {
       expect(cloned.hasHandler('flow1')).toBe(false);
     });
   });
+
+  describe('error handling', () => {
+    it('should handle handler validation errors gracefully', () => {
+      const handler = new MockCallbackFlowHandler('test_flow');
+
+      // Mock validate to throw an error
+      handler.validate = jest.fn().mockImplementation(() => {
+        throw new Error('Validation error');
+      });
+
+      registry.register(handler);
+
+      const params = new URLSearchParams({ test_flow: 'value' });
+      const compatible = registry.getCompatibleHandlers(params, mockConfig);
+
+      // Should handle the error and not include the handler
+      expect(compatible).toHaveLength(0);
+    });
+
+    it('should handle handler canHandle errors gracefully', () => {
+      const handler = new MockCallbackFlowHandler('test_flow');
+
+      // Mock canHandle to throw an error
+      handler.canHandle = jest.fn().mockImplementation(() => {
+        throw new Error('CanHandle error');
+      });
+
+      registry.register(handler);
+
+      const params = new URLSearchParams({ test_flow: 'value' });
+      const compatible = registry.getCompatibleHandlers(params, mockConfig);
+
+      // Should handle the error and not include the handler
+      expect(compatible).toHaveLength(0);
+    });
+
+    it('should handle null parameters in getCompatibleHandlers', () => {
+      const handler = new MockCallbackFlowHandler('test_flow');
+      registry.register(handler);
+
+      expect(() => registry.getCompatibleHandlers(null as any, mockConfig)).not.toThrow();
+      expect(() => registry.getCompatibleHandlers(undefined as any, mockConfig)).not.toThrow();
+    });
+
+    it('should handle null config in getCompatibleHandlers', () => {
+      const handler = new MockCallbackFlowHandler('test_flow');
+      registry.register(handler);
+
+      const params = new URLSearchParams({ test_flow: 'value' });
+      expect(() => registry.getCompatibleHandlers(params, null as any)).not.toThrow();
+    });
+
+    it('should handle handlers with very high priorities', () => {
+      const handler = new MockCallbackFlowHandler('test_flow', Number.MAX_SAFE_INTEGER);
+
+      expect(() => registry.register(handler)).not.toThrow();
+      expect(registry.hasHandler('test_flow')).toBe(true);
+    });
+
+    it('should handle handlers with negative priorities', () => {
+      const handler = new MockCallbackFlowHandler('test_flow', -100);
+
+      expect(() => registry.register(handler)).not.toThrow();
+      expect(registry.hasHandler('test_flow')).toBe(true);
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle empty handler names', () => {
+      const handler = new MockCallbackFlowHandler('');
+
+      expect(() => registry.register(handler)).not.toThrow();
+      expect(registry.hasHandler('')).toBe(true);
+    });
+
+    it('should handle very long handler names', () => {
+      const longName = 'a'.repeat(1000);
+      const handler = new MockCallbackFlowHandler(longName);
+
+      expect(() => registry.register(handler)).not.toThrow();
+      expect(registry.hasHandler(longName)).toBe(true);
+    });
+
+    it('should handle special characters in handler names', () => {
+      const specialName = 'test-flow_with.special@chars#123';
+      const handler = new MockCallbackFlowHandler(specialName);
+
+      expect(() => registry.register(handler)).not.toThrow();
+      expect(registry.hasHandler(specialName)).toBe(true);
+    });
+
+    it('should handle large numbers of handlers', () => {
+      const handlers = [];
+      for (let i = 0; i < 50; i++) {
+        const handler = new MockCallbackFlowHandler(`handler_${i}`, i);
+        handlers.push(handler);
+        registry.register(handler);
+      }
+
+      expect(registry.getHandlerCount()).toBe(50);
+
+      // Test that all handlers are accessible
+      for (let i = 0; i < 50; i++) {
+        expect(registry.hasHandler(`handler_${i}`)).toBe(true);
+      }
+    });
+
+    it('should maintain handler order by priority with many handlers', () => {
+      const priorities = [50, 10, 30, 90, 20];
+      const handlers = priorities.map((priority, index) => {
+        const handler = new MockCallbackFlowHandler(`handler_${index}`, priority);
+        registry.register(handler);
+        return handler;
+      });
+
+      // All handlers should be able to handle the same params
+      handlers.forEach(handler => {
+        handler.canHandle = jest.fn().mockReturnValue(true);
+      });
+
+      const params = new URLSearchParams({ test: 'value' });
+      const compatible = registry.getCompatibleHandlers(params, mockConfig);
+
+      // Should be sorted by priority (descending)
+      const sortedPriorities = compatible.map(h => h.priority);
+      const expectedPriorities = [...priorities].sort((a, b) => b - a);
+
+      expect(sortedPriorities).toEqual(expectedPriorities);
+    });
+  });
 });

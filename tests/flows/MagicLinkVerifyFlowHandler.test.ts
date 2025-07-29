@@ -1,32 +1,32 @@
 /**
- * Unit tests for MagicLinkRegisteredFlowHandler
+ * Unit tests for MagicLinkVerifyFlowHandler
  */
 
-import { MagicLinkRegisteredFlowHandler } from '../../src/flows/MagicLinkRegisteredFlowHandler';
+import { MagicLinkVerifyFlowHandler } from '../../src/flows/MagicLinkVerifyFlowHandler';
 import { createMockConfig } from '../mocks/adapters';
 import type { OAuthConfig } from '../../src/types/OAuthTypes';
 
-describe('MagicLinkRegisteredFlowHandler', () => {
-  let handler: MagicLinkRegisteredFlowHandler;
+describe('MagicLinkVerifyFlowHandler', () => {
+  let handler: MagicLinkVerifyFlowHandler;
   let mockConfig: OAuthConfig;
 
   beforeEach(() => {
-    handler = new MagicLinkRegisteredFlowHandler();
+    handler = new MagicLinkVerifyFlowHandler();
     mockConfig = createMockConfig();
   });
 
   describe('name', () => {
     it('should have the correct name', () => {
-      expect(handler.name).toBe('magic_link_registered');
+      expect(handler.name).toBe('magic_link_verify');
     });
   });
 
   describe('canHandle', () => {
-    it('should handle requests with flow=registered', () => {
+    it('should handle requests with flow=verify', () => {
       const params = new URLSearchParams({
         magic_link_token: 'test-token',
         state: 'test-state',
-        flow: 'registered'
+        flow: 'verify'
       });
 
       expect(handler.canHandle(params, mockConfig)).toBe(true);
@@ -39,14 +39,14 @@ describe('MagicLinkRegisteredFlowHandler', () => {
         flow: 'login'
       });
 
-      const verifyParams = new URLSearchParams({
+      const registeredParams = new URLSearchParams({
         magic_link_token: 'test-token',
         state: 'test-state',
-        flow: 'verify'
+        flow: 'registered'
       });
 
       expect(handler.canHandle(loginParams, mockConfig)).toBe(false);
-      expect(handler.canHandle(verifyParams, mockConfig)).toBe(false);
+      expect(handler.canHandle(registeredParams, mockConfig)).toBe(false);
     });
 
     it('should not handle requests without flow parameter', () => {
@@ -61,12 +61,12 @@ describe('MagicLinkRegisteredFlowHandler', () => {
     it('should not handle requests without required magic link parameters', () => {
       const paramsWithoutToken = new URLSearchParams({
         state: 'test-state',
-        flow: 'registered'
+        flow: 'verify'
       });
 
       const paramsWithoutState = new URLSearchParams({
         magic_link_token: 'test-token',
-        flow: 'registered'
+        flow: 'verify'
       });
 
       expect(handler.canHandle(paramsWithoutToken, mockConfig)).toBe(false);
@@ -78,14 +78,14 @@ describe('MagicLinkRegisteredFlowHandler', () => {
       const configWithDisabledFlow = {
         ...mockConfig,
         flows: {
-          disabledFlows: ['magic_link_registered']
+          disabledFlows: ['magic_link_verify']
         }
       };
 
       const params = new URLSearchParams({
         magic_link_token: 'test-token',
         state: 'test-state',
-        flow: 'registered'
+        flow: 'verify'
       });
 
       expect(handler.canHandle(params, configWithDisabledFlow)).toBe(false);
@@ -97,7 +97,7 @@ describe('MagicLinkRegisteredFlowHandler', () => {
       const params = new URLSearchParams({
         magic_link_token: 'test-token',
         state: 'test-state',
-        flow: 'registered'
+        flow: 'verify'
       });
 
       const result = await handler.validate(params, mockConfig);
@@ -124,7 +124,7 @@ describe('MagicLinkRegisteredFlowHandler', () => {
 
   describe('inheritance', () => {
     it('should inherit from BaseMagicLinkFlowHandler', () => {
-      expect(handler.constructor.name).toBe('MagicLinkRegisteredFlowHandler');
+      expect(handler.constructor.name).toBe('MagicLinkVerifyFlowHandler');
       // Protected methods are not directly accessible, but we can test their effects
       expect(typeof handler.canHandle).toBe('function');
       expect(typeof handler.validate).toBe('function');
@@ -133,23 +133,23 @@ describe('MagicLinkRegisteredFlowHandler', () => {
 
   describe('factory function', () => {
     it('should create handler instance', () => {
-      const { createMagicLinkRegisteredFlowHandler } = require('../../src/flows/MagicLinkRegisteredFlowHandler');
-      const factoryHandler = createMagicLinkRegisteredFlowHandler();
+      const { createMagicLinkVerifyFlowHandler } = require('../../src/flows/MagicLinkVerifyFlowHandler');
+      const factoryHandler = createMagicLinkVerifyFlowHandler();
       
-      expect(factoryHandler).toBeInstanceOf(MagicLinkRegisteredFlowHandler);
-      expect(factoryHandler.name).toBe('magic_link_registered');
+      expect(factoryHandler).toBeInstanceOf(MagicLinkVerifyFlowHandler);
+      expect(factoryHandler.name).toBe('magic_link_verify');
     });
   });
 
   describe('flow parameter validation', () => {
-    it('should only accept flow=registered parameter', () => {
+    it('should only accept flow=verify parameter', () => {
       const testCases = [
-        { flow: 'registered', expected: true },
+        { flow: 'verify', expected: true },
         { flow: 'login', expected: false },
-        { flow: 'verify', expected: false },
+        { flow: 'registered', expected: false },
         { flow: 'signup', expected: false },
         { flow: '', expected: false },
-        { flow: 'REGISTERED', expected: false }, // Case sensitive
+        { flow: 'VERIFY', expected: false }, // Case sensitive
       ];
 
       testCases.forEach(({ flow, expected }) => {
@@ -170,7 +170,7 @@ describe('MagicLinkRegisteredFlowHandler', () => {
       const paramsWithToken = new URLSearchParams({
         token: 'test-token',
         state: 'test-state',
-        flow: 'registered'
+        flow: 'verify'
       });
 
       expect(handler.canHandle(paramsWithToken, mockConfig)).toBe(true);
@@ -180,14 +180,14 @@ describe('MagicLinkRegisteredFlowHandler', () => {
       const configWithDisabledFlows = {
         ...mockConfig,
         flows: {
-          disabledFlows: ['magic_link_registered'] // explicitly disable registered flow
+          disabledFlows: ['magic_link_verify'] // explicitly disable verify flow
         }
       };
 
       const params = new URLSearchParams({
         magic_link_token: 'test-token',
         state: 'test-state',
-        flow: 'registered'
+        flow: 'verify'
       });
 
       expect(handler.canHandle(params, configWithDisabledFlows)).toBe(false);
@@ -197,10 +197,10 @@ describe('MagicLinkRegisteredFlowHandler', () => {
   describe('comprehensive flow validation', () => {
     it('should handle all required parameters correctly', () => {
       const validCombinations = [
-        { magic_link_token: 'token1', flow: 'registered' },
-        { token: 'token2', flow: 'registered' },
-        { magic_link_token: 'token3', state: 'state1', flow: 'registered' },
-        { token: 'token4', state: 'state2', flow: 'registered' }
+        { magic_link_token: 'token1', flow: 'verify' },
+        { token: 'token2', flow: 'verify' },
+        { magic_link_token: 'token3', state: 'state1', flow: 'verify' },
+        { token: 'token4', state: 'state2', flow: 'verify' }
       ];
 
       validCombinations.forEach(params => {
@@ -215,10 +215,10 @@ describe('MagicLinkRegisteredFlowHandler', () => {
     it('should reject invalid flow combinations', () => {
       const invalidCombinations = [
         { magic_link_token: 'token1', flow: 'login' },
-        { magic_link_token: 'token2', flow: 'verify' },
+        { magic_link_token: 'token2', flow: 'registered' },
         { magic_link_token: 'token3', flow: 'signup' },
         { magic_link_token: 'token4' }, // No flow
-        { flow: 'registered' }, // No token
+        { flow: 'verify' }, // No token
         {} // Empty params
       ];
 
@@ -235,11 +235,11 @@ describe('MagicLinkRegisteredFlowHandler', () => {
 
     it('should handle edge case parameter values', () => {
       const edgeCases = [
-        { magic_link_token: '', flow: 'registered' }, // Empty token
+        { magic_link_token: '', flow: 'verify' }, // Empty token
         { magic_link_token: 'token', flow: '' }, // Empty flow
-        { magic_link_token: 'token', flow: 'REGISTERED' }, // Wrong case
-        { magic_link_token: 'token', flow: 'registered ' }, // Trailing space
-        { magic_link_token: ' token', flow: 'registered' }, // Leading space
+        { magic_link_token: 'token', flow: 'VERIFY' }, // Wrong case
+        { magic_link_token: 'token', flow: 'verify ' }, // Trailing space
+        { magic_link_token: ' token', flow: 'verify' }, // Leading space
       ];
 
       edgeCases.forEach(params => {
@@ -252,7 +252,7 @@ describe('MagicLinkRegisteredFlowHandler', () => {
       const complexParams = new URLSearchParams({
         magic_link_token: 'complex-token-123',
         state: 'complex-state-456',
-        flow: 'registered',
+        flow: 'verify',
         extra_param: 'should-be-ignored',
         another_param: 'also-ignored'
       });
@@ -264,7 +264,7 @@ describe('MagicLinkRegisteredFlowHandler', () => {
       const params = new URLSearchParams({
         magic_link_token: 'consistent-token',
         state: 'consistent-state',
-        flow: 'registered'
+        flow: 'verify'
       });
 
       // Multiple calls should return the same result
@@ -272,6 +272,97 @@ describe('MagicLinkRegisteredFlowHandler', () => {
         expect(handler.canHandle(params, mockConfig)).toBe(true);
         expect(handler.validate(params, mockConfig)).resolves.toBe(true);
       }
+    });
+
+    it('should handle URL-encoded parameters', () => {
+      const params = new URLSearchParams({
+        magic_link_token: 'token%20with%20spaces',
+        state: 'state%2Bwith%2Bplus',
+        flow: 'verify'
+      });
+
+      expect(handler.canHandle(params, mockConfig)).toBe(true);
+    });
+
+    it('should handle very long parameter values', () => {
+      const longToken = 'a'.repeat(1000);
+      const longState = 'b'.repeat(1000);
+      
+      const params = new URLSearchParams({
+        magic_link_token: longToken,
+        state: longState,
+        flow: 'verify'
+      });
+
+      expect(handler.canHandle(params, mockConfig)).toBe(true);
+    });
+
+    it('should handle special characters in parameters', () => {
+      const params = new URLSearchParams({
+        magic_link_token: 'token-with_special.chars@123#',
+        state: 'state-with_special.chars@456#',
+        flow: 'verify'
+      });
+
+      expect(handler.canHandle(params, mockConfig)).toBe(true);
+    });
+
+    it('should handle unicode characters in parameters', () => {
+      const params = new URLSearchParams({
+        magic_link_token: 'token-验证-🔐',
+        state: 'state-状态-🚀',
+        flow: 'verify'
+      });
+
+      expect(handler.canHandle(params, mockConfig)).toBe(true);
+    });
+  });
+
+  describe('configuration edge cases', () => {
+    it('should handle null config gracefully', () => {
+      const params = new URLSearchParams({
+        magic_link_token: 'test-token',
+        flow: 'verify'
+      });
+
+      expect(() => handler.canHandle(params, null as any)).not.toThrow();
+    });
+
+    it('should handle undefined config gracefully', () => {
+      const params = new URLSearchParams({
+        magic_link_token: 'test-token',
+        flow: 'verify'
+      });
+
+      expect(() => handler.canHandle(params, undefined as any)).not.toThrow();
+    });
+
+    it('should handle config without flows property', () => {
+      const configWithoutFlows = {
+        ...mockConfig
+      };
+      delete (configWithoutFlows as any).flows;
+
+      const params = new URLSearchParams({
+        magic_link_token: 'test-token',
+        flow: 'verify'
+      });
+
+      expect(handler.canHandle(params, configWithoutFlows)).toBe(true);
+    });
+
+    it('should handle config with empty flows', () => {
+      const configWithEmptyFlows = {
+        ...mockConfig,
+        flows: {}
+      };
+
+      const params = new URLSearchParams({
+        magic_link_token: 'test-token',
+        flow: 'verify'
+      });
+
+      expect(handler.canHandle(params, configWithEmptyFlows)).toBe(true);
     });
   });
 });
