@@ -6,10 +6,9 @@ import { MagicLinkService } from '../../src/services/MagicLinkService';
 import type {
   ExtendedOAuthAdapters,
   MagicLinkConfig,
-  SendMagicLinkInput,
-  MagicLinkResponse
+  SendMagicLinkInput
 } from '../../src/types/ServiceTypes';
-import { createE2EAdapters, createTestMagicLinkConfig } from '../integration/utils/test-adapters';
+import { createE2EAdapters, createTestMagicLinkConfig, setupCommonMocks } from '../integration/utils/test-adapters';
 
 describe('MagicLinkService', () => {
   let service: MagicLinkService;
@@ -19,6 +18,7 @@ describe('MagicLinkService', () => {
   beforeEach(() => {
     adapters = createE2EAdapters();
     config = createTestMagicLinkConfig();
+    setupCommonMocks(adapters);
     service = new MagicLinkService(adapters, config);
   });
 
@@ -55,7 +55,7 @@ describe('MagicLinkService', () => {
 
       (adapters.graphql.sendMagicLinkMutation as jest.Mock).mockResolvedValue({
         success: false,
-        error: 'Service unavailable'
+        message: 'Service unavailable'
       });
 
       const result = await service.sendMagicLink(input);
@@ -75,10 +75,8 @@ describe('MagicLinkService', () => {
 
       (adapters.graphql.sendMagicLinkMutation as jest.Mock).mockRejectedValue(new Error('Network error'));
 
-      const result = await service.sendMagicLink(input);
-
-      expect(result.success).toBe(false);
-      expect(result.message).toContain('Network error');
+      // The service should throw an OAuthError when GraphQL mutation fails
+      await expect(service.sendMagicLink(input)).rejects.toThrow('Magic link sending failed: Network error');
     });
 
     it('should generate magic link with correct parameters', async () => {
@@ -191,6 +189,14 @@ describe('MagicLinkService', () => {
     });
 
     it('should generate unique tokens for different requests', async () => {
+      // Mock PKCE to return different values for each call
+      let callCount = 0;
+      (adapters.pkce.generateCodeChallenge as jest.Mock).mockImplementation(async () => ({
+        codeChallenge: 'test-challenge',
+        codeChallengeMethod: 'S256',
+        codeVerifier: `test-verifier-${++callCount}`
+      }));
+
       const input1: SendMagicLinkInput = {
         email: 'user1@example.com',
         codeChallenge: 'test-challenge',

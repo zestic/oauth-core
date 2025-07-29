@@ -103,7 +103,23 @@ export class CallbackFlowRegistry {
    * Get all handlers that can handle the given parameters
    */
   getCompatibleHandlers(params: URLSearchParams, config: OAuthConfig): CallbackFlowHandler[] {
-    return this.getAllHandlers().filter(handler => handler.canHandle(params, config));
+    // Handle null/undefined parameters gracefully
+    if (!params || !config) {
+      return [];
+    }
+
+    const compatibleHandlers = this.getAllHandlers().filter(handler => {
+      try {
+        return handler.canHandle(params, config);
+      } catch (error) {
+        // Log error but don't let it break the filtering
+        console.warn(`Handler '${handler.name}' threw error in canHandle:`, error);
+        return false;
+      }
+    });
+
+    // Sort by priority (descending - higher priority first)
+    return compatibleHandlers.sort((a, b) => b.priority - a.priority);
   }
 
   /**
