@@ -321,7 +321,7 @@ describe('GraphQL Resolvers', () => {
 
       // Verify URL contains all required parameters
       const url = new URL(magicLinkUrl);
-      expect(url.searchParams.get('magic_link_token')).toBeTruthy();
+      expect(url.searchParams.get('token')).toBeTruthy();
       expect(url.searchParams.get('state')).toBe('test-state-456');
       expect(url.searchParams.get('flow')).toBe('magic_link');
     });

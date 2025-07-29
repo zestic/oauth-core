@@ -134,7 +134,7 @@ describe('GraphQL + OAuth Integration', () => {
       const graphqlCall = (adapters.graphql.sendMagicLinkMutation as jest.Mock).mock.calls[0];
       const magicLinkUrl = graphqlCall[1];
       const urlParams = new URL(magicLinkUrl).searchParams;
-      const magicLinkToken = urlParams.get('magic_link_token');
+      const magicLinkToken = urlParams.get('token');
       const state = urlParams.get('state');
 
       expect(magicLinkToken).toBeTruthy();

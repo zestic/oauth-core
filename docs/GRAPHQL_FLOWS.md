@@ -208,7 +208,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant User as User
-    participant MagicLinkHandler as MagicLinkFlowHandler
+    participant MagicLinkHandler as BaseMagicLinkFlowHandler
     participant Storage as Storage
     participant ClientApp as Client App
 
@@ -255,7 +255,7 @@ graph TD
     H --> I[Store magic_link_token:xyz]
     H --> J[Store magic_link_email:user@example.com]
     
-    K[User Clicks Link] --> L[MagicLinkFlowHandler]
+    K[User Clicks Link] --> L[BaseMagicLinkFlowHandler]
     L --> M[Retrieve pkce_*]
     L --> N[Retrieve magic_link_token:xyz]
     L --> O[Validate State]

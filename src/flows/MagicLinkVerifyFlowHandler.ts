@@ -23,7 +23,7 @@ export class MagicLinkVerifyFlowHandler extends BaseMagicLinkFlowHandler {
       return false;
     }
 
-    // Must have flow=verify parameter
+    // Must have flow=verify parameter (exact match, case-sensitive, no whitespace)
     const flow = params.get('flow');
     return flow === 'verify';
   }

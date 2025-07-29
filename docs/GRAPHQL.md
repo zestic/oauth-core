@@ -85,7 +85,7 @@ type Mutation {
 You need to implement two additional adapters:
 
 ```typescript
-import { UserAdapter, EmailAdapter } from '@zestic/oauth-core';
+import { UserAdapter, GraphQLAdapter } from '@zestic/oauth-core';
 
 class MyUserAdapter implements UserAdapter {
   async registerUser(email: string, additionalData: Record<string, unknown>) {
@@ -102,15 +102,15 @@ class MyUserAdapter implements UserAdapter {
   }
 }
 
-class MyEmailAdapter implements EmailAdapter {
-  async sendMagicLink(email: string, magicLinkUrl: string) {
-    // Send magic link email using your email service
-    // Return EmailResult
+class MyGraphQLAdapter implements GraphQLAdapter {
+  async sendMagicLinkMutation(email: string, magicLinkUrl: string) {
+    // Make GraphQL mutation to trigger server-side magic link sending
+    // Return GraphQLResult
   }
 
-  async sendRegistrationConfirmation(email: string) {
-    // Send registration confirmation email
-    // Return EmailResult
+  async sendRegistrationConfirmationMutation(email: string) {
+    // Make GraphQL mutation to trigger server-side registration confirmation
+    // Return GraphQLResult
   }
 }
 ```
@@ -131,7 +131,7 @@ const adapters = {
   http: new MyHttpAdapter(),
   pkce: new MyPKCEAdapter(),
   user: new MyUserAdapter(),
-  email: new MyEmailAdapter()
+  graphql: new MyGraphQLAdapter()
 };
 
 // Configure magic link settings
@@ -394,7 +394,7 @@ Both GraphQL services and OAuth handlers use the same storage keys:
    - Handler validates state, exchanges token, and completes OAuth flow
 
 3. **Token Exchange**:
-   - MagicLinkFlowHandler retrieves stored PKCE data
+   - BaseMagicLinkFlowHandler retrieves stored PKCE data
    - Validates magic link token and state
    - Exchanges magic link token for OAuth access/refresh tokens
    - Stores OAuth tokens using existing TokenManager
@@ -408,7 +408,7 @@ graph TD
     A --> D[Generate Magic Link Token]
     A --> E[Send Email]
 
-    F[User Clicks Link] --> G[MagicLinkFlowHandler]
+    F[User Clicks Link] --> G[BaseMagicLinkFlowHandler]
     G --> H[Validate State]
     G --> I[Retrieve PKCE Data]
     G --> J[Exchange Token]
@@ -572,7 +572,7 @@ adapters.user.registerUser = jest.fn().mockResolvedValue({
   userId: 'test-user-id'
 });
 
-adapters.email.sendMagicLink = jest.fn().mockResolvedValue({
+adapters.graphql.sendMagicLinkMutation = jest.fn().mockResolvedValue({
   success: true,
   messageId: 'test-message-id'
 });

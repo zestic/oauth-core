@@ -9,7 +9,7 @@ import { FLOW_PRIORITIES } from '../types/CallbackFlowTypes';
 import { TokenManager } from '../core/TokenManager';
 import { StateValidator } from '../core/StateValidator';
 import { ErrorHandler } from '../utils/ErrorHandler';
-import { UrlParser } from '../utils/UrlParser';
+
 
 export abstract class BaseMagicLinkFlowHandler extends BaseCallbackFlowHandler {
   abstract readonly name: string;
@@ -20,14 +20,17 @@ export abstract class BaseMagicLinkFlowHandler extends BaseCallbackFlowHandler {
    * Subclasses should override this to add flow-specific checks
    */
   protected hasRequiredMagicLinkParams(params: URLSearchParams): boolean {
-    return params.has('token') || params.has('magic_link_token');
+    const token = params.get('token');
+
+    // Must have a non-empty token parameter with no leading/trailing whitespace
+    return Boolean(token && token.length > 0 && token === token.trim());
   }
 
   /**
    * Check if this flow is disabled in config
    */
   protected isFlowDisabled(config: OAuthConfig): boolean {
-    return config.flows?.disabledFlows?.includes(this.name) || false;
+    return config?.flows?.disabledFlows?.includes(this.name) || false;
   }
 
   /**
@@ -110,13 +113,13 @@ export abstract class BaseMagicLinkFlowHandler extends BaseCallbackFlowHandler {
   }
 
   /**
-   * Extract token from parameters (supports both 'token' and 'magic_link_token')
+   * Extract token from parameters
    */
   protected extractToken(params: URLSearchParams): string {
-    const token = UrlParser.getFirstParam(params, ['token', 'magic_link_token']);
+    const token = params.get('token');
 
-    if (!token) {
-      throw ErrorHandler.handleMissingParameter('token or magic_link_token');
+    if (!token || token.length === 0 || token !== token.trim()) {
+      throw ErrorHandler.handleMissingParameter('token');
     }
 
     return token;

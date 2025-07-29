@@ -24,7 +24,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
   describe('canHandle', () => {
     it('should handle requests with flow=verify', () => {
       const params = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state',
         flow: 'verify'
       });
@@ -34,13 +34,13 @@ describe('MagicLinkVerifyFlowHandler', () => {
 
     it('should not handle requests with different flow values', () => {
       const loginParams = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state',
         flow: 'login'
       });
 
       const registeredParams = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state',
         flow: 'registered'
       });
@@ -51,7 +51,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
 
     it('should not handle requests without flow parameter', () => {
       const params = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state'
       });
 
@@ -65,7 +65,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
       });
 
       const paramsWithoutState = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         flow: 'verify'
       });
 
@@ -83,7 +83,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
       };
 
       const params = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state',
         flow: 'verify'
       });
@@ -95,7 +95,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
   describe('validate', () => {
     it('should validate parameters that can be handled', async () => {
       const params = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state',
         flow: 'verify'
       });
@@ -106,7 +106,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
 
     it('should not validate parameters that cannot be handled', async () => {
       const params = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state',
         flow: 'login'
       });
@@ -154,7 +154,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
 
       testCases.forEach(({ flow, expected }) => {
         const params = new URLSearchParams({
-          magic_link_token: 'test-token',
+          token: 'test-token',
           state: 'test-state',
           flow
         });
@@ -185,7 +185,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
       };
 
       const params = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state',
         flow: 'verify'
       });
@@ -197,9 +197,9 @@ describe('MagicLinkVerifyFlowHandler', () => {
   describe('comprehensive flow validation', () => {
     it('should handle all required parameters correctly', () => {
       const validCombinations = [
-        { magic_link_token: 'token1', flow: 'verify' },
+        { token: 'token1', flow: 'verify' },
         { token: 'token2', flow: 'verify' },
-        { magic_link_token: 'token3', state: 'state1', flow: 'verify' },
+        { token: 'token3', state: 'state1', flow: 'verify' },
         { token: 'token4', state: 'state2', flow: 'verify' }
       ];
 
@@ -214,10 +214,10 @@ describe('MagicLinkVerifyFlowHandler', () => {
 
     it('should reject invalid flow combinations', () => {
       const invalidCombinations = [
-        { magic_link_token: 'token1', flow: 'login' },
-        { magic_link_token: 'token2', flow: 'registered' },
-        { magic_link_token: 'token3', flow: 'signup' },
-        { magic_link_token: 'token4' }, // No flow
+        { token: 'token1', flow: 'login' },
+        { token: 'token2', flow: 'registered' },
+        { token: 'token3', flow: 'signup' },
+        { token: 'token4' }, // No flow
         { flow: 'verify' }, // No token
         {} // Empty params
       ];
@@ -235,11 +235,11 @@ describe('MagicLinkVerifyFlowHandler', () => {
 
     it('should handle edge case parameter values', () => {
       const edgeCases = [
-        { magic_link_token: '', flow: 'verify' }, // Empty token
-        { magic_link_token: 'token', flow: '' }, // Empty flow
-        { magic_link_token: 'token', flow: 'VERIFY' }, // Wrong case
-        { magic_link_token: 'token', flow: 'verify ' }, // Trailing space
-        { magic_link_token: ' token', flow: 'verify' }, // Leading space
+        { token: '', flow: 'verify' }, // Empty token
+        { token: 'token', flow: '' }, // Empty flow
+        { token: 'token', flow: 'VERIFY' }, // Wrong case
+        { token: 'token', flow: 'verify ' }, // Trailing space
+        { token: ' token', flow: 'verify' }, // Leading space
       ];
 
       edgeCases.forEach(params => {
@@ -250,7 +250,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
 
     it('should handle complex parameter scenarios', () => {
       const complexParams = new URLSearchParams({
-        magic_link_token: 'complex-token-123',
+        token: 'complex-token-123',
         state: 'complex-state-456',
         flow: 'verify',
         extra_param: 'should-be-ignored',
@@ -262,7 +262,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
 
     it('should validate consistently across multiple calls', () => {
       const params = new URLSearchParams({
-        magic_link_token: 'consistent-token',
+        token: 'consistent-token',
         state: 'consistent-state',
         flow: 'verify'
       });
@@ -276,7 +276,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
 
     it('should handle URL-encoded parameters', () => {
       const params = new URLSearchParams({
-        magic_link_token: 'token%20with%20spaces',
+        token: 'token%20with%20spaces',
         state: 'state%2Bwith%2Bplus',
         flow: 'verify'
       });
@@ -289,7 +289,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
       const longState = 'b'.repeat(1000);
       
       const params = new URLSearchParams({
-        magic_link_token: longToken,
+        token: longToken,
         state: longState,
         flow: 'verify'
       });
@@ -299,7 +299,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
 
     it('should handle special characters in parameters', () => {
       const params = new URLSearchParams({
-        magic_link_token: 'token-with_special.chars@123#',
+        token: 'token-with_special.chars@123#',
         state: 'state-with_special.chars@456#',
         flow: 'verify'
       });
@@ -309,7 +309,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
 
     it('should handle unicode characters in parameters', () => {
       const params = new URLSearchParams({
-        magic_link_token: 'token-验证-🔐',
+        token: 'token-验证-🔐',
         state: 'state-状态-🚀',
         flow: 'verify'
       });
@@ -321,7 +321,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
   describe('configuration edge cases', () => {
     it('should handle null config gracefully', () => {
       const params = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         flow: 'verify'
       });
 
@@ -330,7 +330,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
 
     it('should handle undefined config gracefully', () => {
       const params = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         flow: 'verify'
       });
 
@@ -344,7 +344,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
       delete (configWithoutFlows as any).flows;
 
       const params = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         flow: 'verify'
       });
 
@@ -358,7 +358,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
       };
 
       const params = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         flow: 'verify'
       });
 

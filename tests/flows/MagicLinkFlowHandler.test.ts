@@ -48,13 +48,7 @@ describe('BaseMagicLinkFlowHandler', () => {
       expect(handler.canHandle(params, mockConfig)).toBe(true);
     });
 
-    it('should handle magic link parameters with magic_link_token', () => {
-      const params = new URLSearchParams({
-        magic_link_token: 'test-magic-token',
-      });
 
-      expect(handler.canHandle(params, mockConfig)).toBe(true);
-    });
 
     it('should not handle authorization code parameters', () => {
       const params = new URLSearchParams({
@@ -92,16 +86,7 @@ describe('BaseMagicLinkFlowHandler', () => {
       expect(result.expiresIn).toBe(3600);
     });
 
-    it('should successfully handle magic link flow with magic_link_token parameter', async () => {
-      const params = new URLSearchParams({
-        magic_link_token: 'test-magic-token',
-      });
 
-      const result = await handler.handle(params, mockAdapters, mockConfig);
-
-      expect(result.success).toBe(true);
-      expect(result.accessToken).toBe('test-access-token');
-    });
 
     it('should handle flow with additional parameters', async () => {
       const params = new URLSearchParams({
@@ -242,14 +227,7 @@ describe('BaseMagicLinkFlowHandler', () => {
       expect(isValid).toBe(true);
     });
 
-    it('should validate parameters with magic_link_token', async () => {
-      const params = new URLSearchParams({
-        magic_link_token: 'test-magic-token',
-      });
 
-      const isValid = await handler.validate(params, mockConfig);
-      expect(isValid).toBe(true);
-    });
 
     it('should validate parameters with state', async () => {
       const params = new URLSearchParams({
@@ -338,14 +316,7 @@ describe('MagicLinkLoginFlowHandler', () => {
       expect(handler.canHandle(params, mockConfig)).toBe(false);
     });
 
-    it('should handle magic_link_token parameter', () => {
-      const params = new URLSearchParams({
-        magic_link_token: 'test-magic-token',
-        flow: 'login',
-      });
 
-      expect(handler.canHandle(params, mockConfig)).toBe(true);
-    });
 
     it('should not handle without token parameter', () => {
       const params = new URLSearchParams({
@@ -401,7 +372,7 @@ describe('MagicLinkVerifyFlowHandler', () => {
   describe('canHandle', () => {
     it('should handle magic link verify flow', () => {
       const params = new URLSearchParams({
-        magic_link_token: 'test-magic-token',
+        token: 'test-magic-token',
         flow: 'verify',
       });
 

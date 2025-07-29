@@ -206,15 +206,15 @@ export class MagicLinkService {
    */
   private buildMagicLinkUrl(magicLinkToken: MagicLinkToken): string {
     const url = new URL(this.config.baseUrl);
-    
+
     // Add magic link token
-    url.searchParams.set('magic_link_token', magicLinkToken.token);
-    
+    url.searchParams.set('token', magicLinkToken.token);
+
     // Add OAuth parameters
     url.searchParams.set('state', magicLinkToken.state);
     url.searchParams.set('redirect_uri', magicLinkToken.redirectUri);
     url.searchParams.set('flow', 'magic_link');
-    
+
     // Add any custom parameters
     if (this.config.customParams) {
       Object.entries(this.config.customParams).forEach(([key, value]) => {

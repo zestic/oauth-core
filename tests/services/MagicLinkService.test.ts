@@ -99,7 +99,7 @@ describe('MagicLinkService', () => {
       const magicLinkUrl = call[1];
       const url = new URL(magicLinkUrl);
 
-      expect(url.searchParams.get('magic_link_token')).toBeTruthy();
+      expect(url.searchParams.get('token')).toBeTruthy();
       expect(url.searchParams.get('state')).toBe('state-456');
       expect(url.searchParams.get('flow')).toBe('magic_link');
     });
@@ -225,8 +225,8 @@ describe('MagicLinkService', () => {
       const url1 = new URL(calls[0][1]);
       const url2 = new URL(calls[1][1]);
 
-      const token1 = url1.searchParams.get('magic_link_token');
-      const token2 = url2.searchParams.get('magic_link_token');
+      const token1 = url1.searchParams.get('token');
+      const token2 = url2.searchParams.get('token');
 
       expect(token1).not.toBe(token2);
     });
