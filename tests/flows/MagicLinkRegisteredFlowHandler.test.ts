@@ -24,7 +24,7 @@ describe('MagicLinkRegisteredFlowHandler', () => {
   describe('canHandle', () => {
     it('should handle requests with flow=registered', () => {
       const params = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state',
         flow: 'registered'
       });
@@ -34,13 +34,13 @@ describe('MagicLinkRegisteredFlowHandler', () => {
 
     it('should not handle requests with different flow values', () => {
       const loginParams = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state',
         flow: 'login'
       });
 
       const verifyParams = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state',
         flow: 'verify'
       });
@@ -51,7 +51,7 @@ describe('MagicLinkRegisteredFlowHandler', () => {
 
     it('should not handle requests without flow parameter', () => {
       const params = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state'
       });
 
@@ -65,7 +65,7 @@ describe('MagicLinkRegisteredFlowHandler', () => {
       });
 
       const paramsWithoutState = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         flow: 'registered'
       });
 
@@ -83,7 +83,7 @@ describe('MagicLinkRegisteredFlowHandler', () => {
       };
 
       const params = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state',
         flow: 'registered'
       });
@@ -95,7 +95,7 @@ describe('MagicLinkRegisteredFlowHandler', () => {
   describe('validate', () => {
     it('should validate parameters that can be handled', async () => {
       const params = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state',
         flow: 'registered'
       });
@@ -106,7 +106,7 @@ describe('MagicLinkRegisteredFlowHandler', () => {
 
     it('should not validate parameters that cannot be handled', async () => {
       const params = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state',
         flow: 'login'
       });
@@ -154,7 +154,7 @@ describe('MagicLinkRegisteredFlowHandler', () => {
 
       testCases.forEach(({ flow, expected }) => {
         const params = new URLSearchParams({
-          magic_link_token: 'test-token',
+          token: 'test-token',
           state: 'test-state',
           flow
         });
@@ -185,7 +185,7 @@ describe('MagicLinkRegisteredFlowHandler', () => {
       };
 
       const params = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state',
         flow: 'registered'
       });
@@ -197,9 +197,9 @@ describe('MagicLinkRegisteredFlowHandler', () => {
   describe('comprehensive flow validation', () => {
     it('should handle all required parameters correctly', () => {
       const validCombinations = [
-        { magic_link_token: 'token1', flow: 'registered' },
+        { token: 'token1', flow: 'registered' },
         { token: 'token2', flow: 'registered' },
-        { magic_link_token: 'token3', state: 'state1', flow: 'registered' },
+        { token: 'token3', state: 'state1', flow: 'registered' },
         { token: 'token4', state: 'state2', flow: 'registered' }
       ];
 
@@ -214,10 +214,10 @@ describe('MagicLinkRegisteredFlowHandler', () => {
 
     it('should reject invalid flow combinations', () => {
       const invalidCombinations = [
-        { magic_link_token: 'token1', flow: 'login' },
-        { magic_link_token: 'token2', flow: 'verify' },
-        { magic_link_token: 'token3', flow: 'signup' },
-        { magic_link_token: 'token4' }, // No flow
+        { token: 'token1', flow: 'login' },
+        { token: 'token2', flow: 'verify' },
+        { token: 'token3', flow: 'signup' },
+        { token: 'token4' }, // No flow
         { flow: 'registered' }, // No token
         {} // Empty params
       ];
@@ -235,11 +235,11 @@ describe('MagicLinkRegisteredFlowHandler', () => {
 
     it('should handle edge case parameter values', () => {
       const edgeCases = [
-        { magic_link_token: '', flow: 'registered' }, // Empty token
-        { magic_link_token: 'token', flow: '' }, // Empty flow
-        { magic_link_token: 'token', flow: 'REGISTERED' }, // Wrong case
-        { magic_link_token: 'token', flow: 'registered ' }, // Trailing space
-        { magic_link_token: ' token', flow: 'registered' }, // Leading space
+        { token: '', flow: 'registered' }, // Empty token
+        { token: 'token', flow: '' }, // Empty flow
+        { token: 'token', flow: 'REGISTERED' }, // Wrong case
+        { token: 'token', flow: 'registered ' }, // Trailing space
+        { token: ' token', flow: 'registered' }, // Leading space
       ];
 
       edgeCases.forEach(params => {
@@ -250,7 +250,7 @@ describe('MagicLinkRegisteredFlowHandler', () => {
 
     it('should handle complex parameter scenarios', () => {
       const complexParams = new URLSearchParams({
-        magic_link_token: 'complex-token-123',
+        token: 'complex-token-123',
         state: 'complex-state-456',
         flow: 'registered',
         extra_param: 'should-be-ignored',
@@ -262,7 +262,7 @@ describe('MagicLinkRegisteredFlowHandler', () => {
 
     it('should validate consistently across multiple calls', () => {
       const params = new URLSearchParams({
-        magic_link_token: 'consistent-token',
+        token: 'consistent-token',
         state: 'consistent-state',
         flow: 'registered'
       });
