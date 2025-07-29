@@ -142,7 +142,7 @@ describe('GraphQL + OAuth Integration', () => {
 
       // Step 4: Simulate user clicking magic link (OAuth callback)
       const callbackParams = new URLSearchParams({
-        magic_link_token: magicLinkToken!,
+        token: magicLinkToken!,
         state: state!,
         flow: 'login'
       });
@@ -205,10 +205,10 @@ describe('GraphQL + OAuth Integration', () => {
       const graphqlCall = (adapters.graphql.sendMagicLinkMutation as jest.Mock).mock.calls[0];
       const magicLinkUrl = graphqlCall[1];
       const urlParams = new URL(magicLinkUrl).searchParams;
-      const magicLinkToken = urlParams.get('magic_link_token');
+      const magicLinkToken = urlParams.get('token');
 
       const callbackParams = new URLSearchParams({
-        magic_link_token: magicLinkToken!,
+        token: magicLinkToken!,
         state: 'direct-state'
       });
 
@@ -295,7 +295,7 @@ describe('GraphQL + OAuth Integration', () => {
       });
 
       const callbackParams = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'test-state',
         flow: 'login'
       });
@@ -459,7 +459,7 @@ describe('GraphQL + OAuth Integration', () => {
 
       // Simulate callback with correct state
       const callbackParams = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state
       });
 
@@ -488,7 +488,7 @@ describe('GraphQL + OAuth Integration', () => {
 
       // Simulate callback with different state
       const callbackParams = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'wrong-state'
       });
 

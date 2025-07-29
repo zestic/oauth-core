@@ -135,7 +135,7 @@ describe('GraphQL + OAuth Magic Link Verify Flow Integration', () => {
       const graphqlCall = (adapters.graphql.sendMagicLinkMutation as jest.Mock).mock.calls[0];
       const magicLinkUrl = graphqlCall[1]; // Second parameter is the URL
       const urlParams = new URL(magicLinkUrl).searchParams;
-      const magicLinkToken = urlParams.get('magic_link_token');
+      const magicLinkToken = urlParams.get('token');
       const state = urlParams.get('state');
 
       expect(magicLinkToken).toBeTruthy();
@@ -143,7 +143,7 @@ describe('GraphQL + OAuth Magic Link Verify Flow Integration', () => {
 
       // Step 4: Simulate user clicking verification magic link (OAuth callback)
       const callbackParams = new URLSearchParams({
-        magic_link_token: magicLinkToken!,
+        token: magicLinkToken!,
         state: state!,
         flow: 'verify'
       });
@@ -190,11 +190,11 @@ describe('GraphQL + OAuth Magic Link Verify Flow Integration', () => {
       const graphqlCall = (adapters.graphql.sendMagicLinkMutation as jest.Mock).mock.calls[0];
       const magicLinkUrl = graphqlCall[1]; // Second parameter is the URL
       const urlParams = new URL(magicLinkUrl).searchParams;
-      const magicLinkToken = urlParams.get('magic_link_token');
+      const magicLinkToken = urlParams.get('token');
 
       // Step 3: Simulate verification callback
       const callbackParams = new URLSearchParams({
-        magic_link_token: magicLinkToken!,
+        token: magicLinkToken!,
         state: 'test-oauth-state',
         flow: 'verify'
       });
@@ -269,7 +269,7 @@ describe('GraphQL + OAuth Magic Link Verify Flow Integration', () => {
       });
 
       const callbackParams = new URLSearchParams({
-        magic_link_token: 'invalid-token',
+        token: 'invalid-token',
         state: 'test-oauth-state',
         flow: 'verify'
       });
@@ -305,7 +305,7 @@ describe('GraphQL + OAuth Magic Link Verify Flow Integration', () => {
 
       // Step 2: Use the same state in verification callback
       const callbackParams = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         flow: 'verify',
         state: state || 'test-oauth-state'
       });
@@ -332,7 +332,7 @@ describe('GraphQL + OAuth Magic Link Verify Flow Integration', () => {
 
       // Use different state in callback (CSRF attack simulation)
       const callbackParams = new URLSearchParams({
-        magic_link_token: 'test-token',
+        token: 'test-token',
         state: 'wrong-state',
         flow: 'verify'
       });
@@ -364,10 +364,10 @@ describe('GraphQL + OAuth Magic Link Verify Flow Integration', () => {
       const graphqlCall = (adapters.graphql.sendMagicLinkMutation as jest.Mock).mock.calls[0];
       const magicLinkUrl = graphqlCall[1];
       const urlParams = new URL(magicLinkUrl).searchParams;
-      const magicLinkToken = urlParams.get('magic_link_token');
+      const magicLinkToken = urlParams.get('token');
 
       const callbackParams = new URLSearchParams({
-        magic_link_token: magicLinkToken!,
+        token: magicLinkToken!,
         state: 'test-oauth-state',
         flow: 'verify'
       });
@@ -408,10 +408,10 @@ describe('GraphQL + OAuth Magic Link Verify Flow Integration', () => {
       const graphqlCall = (adapters.graphql.sendMagicLinkMutation as jest.Mock).mock.calls[0];
       const magicLinkUrl = graphqlCall[1];
       const urlParams = new URL(magicLinkUrl).searchParams;
-      const magicLinkToken = urlParams.get('magic_link_token');
+      const magicLinkToken = urlParams.get('token');
 
       const callbackParams = new URLSearchParams({
-        magic_link_token: magicLinkToken!,
+        token: magicLinkToken!,
         state: 'test-oauth-state',
         flow: 'verify'
       });
