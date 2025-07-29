@@ -188,6 +188,42 @@ describe('MagicLinkService', () => {
       await expect(service.sendMagicLink(input)).rejects.toThrow();
     });
 
+    it('should handle missing code challenge method', async () => {
+      const input: SendMagicLinkInput = {
+        email: 'user@example.com',
+        codeChallenge: 'test-challenge',
+        codeChallengeMethod: '',
+        redirectUri: 'https://app.example.com/callback',
+        state: 'test-state'
+      };
+
+      await expect(service.sendMagicLink(input)).rejects.toThrow();
+    });
+
+    it('should handle invalid code challenge method', async () => {
+      const input: SendMagicLinkInput = {
+        email: 'user@example.com',
+        codeChallenge: 'test-challenge',
+        codeChallengeMethod: 'invalid-method',
+        redirectUri: 'https://app.example.com/callback',
+        state: 'test-state'
+      };
+
+      await expect(service.sendMagicLink(input)).rejects.toThrow();
+    });
+
+    it('should handle invalid redirect URI format', async () => {
+      const input: SendMagicLinkInput = {
+        email: 'user@example.com',
+        codeChallenge: 'test-challenge',
+        codeChallengeMethod: 'S256',
+        redirectUri: 'invalid-uri',
+        state: 'test-state'
+      };
+
+      await expect(service.sendMagicLink(input)).rejects.toThrow();
+    });
+
     it('should generate unique tokens for different requests', async () => {
       // Mock PKCE to return different values for each call
       let callCount = 0;
