@@ -157,10 +157,16 @@ export class RegistrationService {
   }
 
   /**
-   * Simple email validation
+   * Simple email validation - ReDoS safe implementation
    */
   private isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Input length validation to prevent ReDoS attacks
+    if (email.length > 254) {
+      return false;
+    }
+
+    // ReDoS-safe email regex pattern
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     return emailRegex.test(email);
   }
 
