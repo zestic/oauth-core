@@ -213,7 +213,7 @@ describe('GraphQL Resolvers', () => {
 
       expect(adapters.graphql.sendMagicLinkMutation).toHaveBeenCalledWith(
         'user@example.com',
-        expect.stringContaining('magic_link_token='),
+        expect.stringContaining('token='),
         expect.objectContaining({
           subject: 'Your Magic Link',
           templateData: expect.objectContaining({
