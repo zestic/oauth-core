@@ -7,11 +7,10 @@ export { BaseCallbackFlowHandler, SimpleCallbackFlowHandler, FlowHandlerFactory 
 
 // Built-in flow handlers
 
-export {
-  MagicLinkFlowHandler,
-  MagicLinkLoginFlowHandler,
-  MagicLinkRegistrationFlowHandler
-} from './MagicLinkFlowHandler';
+export { BaseMagicLinkFlowHandler } from './BaseMagicLinkFlowHandler';
+export { MagicLinkLoginFlowHandler } from './MagicLinkLoginFlowHandler';
+export { MagicLinkVerifyFlowHandler } from './MagicLinkVerifyFlowHandler';
+export { MagicLinkRegisteredFlowHandler, createMagicLinkRegisteredFlowHandler } from './MagicLinkRegisteredFlowHandler';
 
 // Flow types
 export * from '../types/CallbackFlowTypes';

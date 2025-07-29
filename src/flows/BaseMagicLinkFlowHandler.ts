@@ -1,5 +1,6 @@
 /**
- * Magic Link Flow Handler
+ * Base Magic Link Flow Handler
+ * Abstract base class for all magic link flow implementations
  */
 
 import { BaseCallbackFlowHandler } from './BaseCallbackFlowHandler';
@@ -10,35 +11,40 @@ import { StateValidator } from '../core/StateValidator';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { UrlParser } from '../utils/UrlParser';
 
-export class MagicLinkFlowHandler extends BaseCallbackFlowHandler {
-  readonly name = 'magic_link';
+export abstract class BaseMagicLinkFlowHandler extends BaseCallbackFlowHandler {
+  abstract readonly name: string;
   readonly priority = FLOW_PRIORITIES.HIGH; // Higher priority than standard OAuth
 
   /**
    * Check if this handler can process the given parameters
+   * Subclasses should override this to add flow-specific checks
    */
-  canHandle(params: URLSearchParams, config: OAuthConfig): boolean {
-    // Magic link flow requires either 'token' or 'magic_link_token' parameter
-    const hasRequiredParams = params.has('token') || params.has('magic_link_token');
+  protected hasRequiredMagicLinkParams(params: URLSearchParams): boolean {
+    return params.has('token') || params.has('magic_link_token');
+  }
 
-    // Check if this flow is explicitly disabled in config
-    if (config.flows?.disabledFlows?.includes(this.name)) {
-      return false;
-    }
-
-    return hasRequiredParams;
+  /**
+   * Check if this flow is disabled in config
+   */
+  protected isFlowDisabled(config: OAuthConfig): boolean {
+    return config.flows?.disabledFlows?.includes(this.name) || false;
   }
 
   /**
    * Validate the magic link flow parameters
    */
-  async validate(params: URLSearchParams): Promise<boolean> {
+  async validate(params: URLSearchParams, config: OAuthConfig): Promise<boolean> {
     try {
       // Check for OAuth errors first
       this.checkForOAuthError(params);
 
+      // Check if this flow is disabled
+      if (this.isFlowDisabled(config)) {
+        return false;
+      }
+
       // Must have either token or magic_link_token
-      const hasToken = params.has('token') || params.has('magic_link_token');
+      const hasToken = this.hasRequiredMagicLinkParams(params);
       if (!hasToken) {
         return false;
       }
@@ -58,7 +64,7 @@ export class MagicLinkFlowHandler extends BaseCallbackFlowHandler {
   }
 
   /**
-   * Handle the magic link flow
+   * Handle the magic link flow - shared implementation for all magic link flows
    */
   async handle(params: URLSearchParams, adapters: OAuthAdapters, config: OAuthConfig): Promise<OAuthResult> {
     this.logFlowExecution('Starting magic link flow', params);
@@ -89,7 +95,7 @@ export class MagicLinkFlowHandler extends BaseCallbackFlowHandler {
 
       } catch (error) {
         this.logFlowExecution(`Magic link flow failed: ${ErrorHandler.formatError(error)}`);
-        
+
         if (ErrorHandler.isOAuthError(error)) {
           throw error;
         }
@@ -106,9 +112,9 @@ export class MagicLinkFlowHandler extends BaseCallbackFlowHandler {
   /**
    * Extract token from parameters (supports both 'token' and 'magic_link_token')
    */
-  private extractToken(params: URLSearchParams): string {
+  protected extractToken(params: URLSearchParams): string {
     const token = UrlParser.getFirstParam(params, ['token', 'magic_link_token']);
-    
+
     if (!token) {
       throw ErrorHandler.handleMissingParameter('token or magic_link_token');
     }
@@ -119,7 +125,7 @@ export class MagicLinkFlowHandler extends BaseCallbackFlowHandler {
   /**
    * Build additional parameters for token exchange
    */
-  private buildAdditionalParams(params: URLSearchParams, flow?: string): Record<string, string> {
+  protected buildAdditionalParams(params: URLSearchParams, flow?: string): Record<string, string> {
     const additionalParams: Record<string, string> = {};
 
     // Include flow type if specified
@@ -155,7 +161,7 @@ export class MagicLinkFlowHandler extends BaseCallbackFlowHandler {
   /**
    * Validate state parameter
    */
-  private async validateState(state: string, adapters: OAuthAdapters): Promise<void> {
+  protected async validateState(state: string, adapters: OAuthAdapters): Promise<void> {
     const stateValidator = new StateValidator(adapters.storage);
     await stateValidator.validateStateOrThrow(state);
   }
@@ -163,7 +169,7 @@ export class MagicLinkFlowHandler extends BaseCallbackFlowHandler {
   /**
    * Exchange magic link token for OAuth tokens
    */
-  private async exchangeMagicLinkToken(
+  protected async exchangeMagicLinkToken(
     token: string,
     additionalParams: Record<string, string>,
     adapters: OAuthAdapters,
@@ -172,67 +178,4 @@ export class MagicLinkFlowHandler extends BaseCallbackFlowHandler {
     const tokenManager = new TokenManager(adapters.http, adapters.storage);
     return tokenManager.exchangeMagicLinkToken(token, config, additionalParams);
   }
-}
-
-/**
- * Factory function to create magic link flow handler
- */
-export function createMagicLinkFlowHandler(): MagicLinkFlowHandler {
-  return new MagicLinkFlowHandler();
-}
-
-/**
- * Specialized handlers for different magic link flows
- */
-export class MagicLinkLoginFlowHandler extends BaseCallbackFlowHandler {
-  readonly name = 'magic_link_login';
-  readonly priority = FLOW_PRIORITIES.HIGH;
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  canHandle(params: URLSearchParams, _config: OAuthConfig): boolean {
-    const hasToken = params.has('token') || params.has('magic_link_token');
-    const flow = params.get('flow');
-    return hasToken && flow === 'login';
-  }
-
-  async validate(params: URLSearchParams, config: OAuthConfig): Promise<boolean> {
-    return this.canHandle(params, config);
-  }
-
-  async handle(params: URLSearchParams, adapters: OAuthAdapters, config: OAuthConfig): Promise<OAuthResult> {
-    const handler = new MagicLinkFlowHandler();
-    return handler.handle(params, adapters, config);
-  }
-}
-
-export class MagicLinkRegistrationFlowHandler extends BaseCallbackFlowHandler {
-  readonly name = 'magic_link_registration';
-  readonly priority = FLOW_PRIORITIES.HIGH;
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  canHandle(params: URLSearchParams, _config: OAuthConfig): boolean {
-    const hasToken = params.has('token') || params.has('magic_link_token');
-    const flow = params.get('flow');
-    return hasToken && flow === 'registration';
-  }
-
-  async validate(params: URLSearchParams, config: OAuthConfig): Promise<boolean> {
-    return this.canHandle(params, config);
-  }
-
-  async handle(params: URLSearchParams, adapters: OAuthAdapters, config: OAuthConfig): Promise<OAuthResult> {
-    const handler = new MagicLinkFlowHandler();
-    return handler.handle(params, adapters, config);
-  }
-}
-
-/**
- * Factory functions for specialized handlers
- */
-export function createMagicLinkLoginFlowHandler(): MagicLinkLoginFlowHandler {
-  return new MagicLinkLoginFlowHandler();
-}
-
-export function createMagicLinkRegistrationFlowHandler(): MagicLinkRegistrationFlowHandler {
-  return new MagicLinkRegistrationFlowHandler();
 }

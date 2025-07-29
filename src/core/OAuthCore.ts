@@ -16,7 +16,7 @@ import {
 import { CallbackFlowHandler } from '../types/CallbackFlowTypes';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { UrlParser } from '../utils/UrlParser';
-import { MagicLinkFlowHandler } from '../flows';
+// Note: Flow handlers are now registered manually by the user
 
 export class OAuthCore {
   private flowRegistry: CallbackFlowRegistry;
@@ -47,6 +47,13 @@ export class OAuthCore {
 
       // Log callback attempt (with sanitized parameters)
       console.log('[OAuthCore] Handling callback:', UrlParser.sanitizeForLogging(urlParams));
+
+      // Validate that we have at least one flow handler registered
+      if (this.flowRegistry.getHandlerCount() === 0) {
+        throw ErrorHandler.handleInvalidConfiguration(
+          'No flow handlers registered. Use registerFlow() to register at least one flow handler.'
+        );
+      }
 
       let handler: CallbackFlowHandler | undefined;
 
@@ -237,17 +244,10 @@ export class OAuthCore {
    * Initialize flow handlers based on configuration
    */
   private initializeFlows(flowConfig?: FlowConfiguration): void {
-    // Register built-in flows first
-    const builtInHandlers = [
-      new MagicLinkFlowHandler(),
-    ];
-
-    for (const handler of builtInHandlers) {
-      // Only register if not explicitly disabled
-      if (!flowConfig?.disabledFlows?.includes(handler.name)) {
-        this.flowRegistry.register(handler);
-      }
-    }
+    // No built-in flows are automatically registered
+    // Users must manually register the specific flow handlers they need:
+    // - MagicLinkLoginFlowHandler for login flows
+    // - MagicLinkVerifyFlowHandler for verification flows
 
     // Register custom flows if provided
     if (flowConfig?.customFlows) {
@@ -267,13 +267,9 @@ export class OAuthCore {
       }
     }
 
-    // Validate that we have at least one flow handler
-    if (this.flowRegistry.getHandlerCount() === 0) {
-      throw ErrorHandler.handleInvalidConfiguration(
-        'No flow handlers registered. At least one flow handler is required.'
-      );
-    }
+    // Note: Flow handlers must be manually registered after initialization
+    // The validation will happen when handleCallback is called
 
-    console.log('[OAuthCore] Initialized with flows:', this.flowRegistry.getHandlerNames());
+    console.log('[OAuthCore] Initialized. Flow handlers must be registered manually.');
   }
 }

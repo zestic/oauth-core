@@ -1,14 +1,28 @@
-import { MagicLinkFlowHandler, MagicLinkLoginFlowHandler, MagicLinkRegistrationFlowHandler } from '../../src/flows/MagicLinkFlowHandler';
+import { BaseMagicLinkFlowHandler } from '../../src/flows/BaseMagicLinkFlowHandler';
+import { MagicLinkLoginFlowHandler } from '../../src/flows/MagicLinkLoginFlowHandler';
+import { MagicLinkVerifyFlowHandler } from '../../src/flows/MagicLinkVerifyFlowHandler';
 import { OAuthError } from '../../src/types/OAuthTypes';
 import { createMockAdapters, createMockConfig, MockHttpAdapter } from '../mocks/adapters';
 
-describe('MagicLinkFlowHandler', () => {
-  let handler: MagicLinkFlowHandler;
+// Create a concrete implementation for testing the base class
+class TestMagicLinkFlowHandler extends BaseMagicLinkFlowHandler {
+  readonly name = 'test_magic_link';
+
+  canHandle(params: URLSearchParams, config: any): boolean {
+    if (this.isFlowDisabled(config)) {
+      return false;
+    }
+    return this.hasRequiredMagicLinkParams(params);
+  }
+}
+
+describe('BaseMagicLinkFlowHandler', () => {
+  let handler: TestMagicLinkFlowHandler;
   let mockAdapters: ReturnType<typeof createMockAdapters>;
   let mockConfig: ReturnType<typeof createMockConfig>;
 
   beforeEach(() => {
-    handler = new MagicLinkFlowHandler();
+    handler = new TestMagicLinkFlowHandler();
     mockAdapters = createMockAdapters();
     mockConfig = createMockConfig();
 
@@ -224,7 +238,7 @@ describe('MagicLinkFlowHandler', () => {
         token: 'test-magic-token',
       });
 
-      const isValid = await handler.validate(params);
+      const isValid = await handler.validate(params, mockConfig);
       expect(isValid).toBe(true);
     });
 
@@ -233,7 +247,7 @@ describe('MagicLinkFlowHandler', () => {
         magic_link_token: 'test-magic-token',
       });
 
-      const isValid = await handler.validate(params);
+      const isValid = await handler.validate(params, mockConfig);
       expect(isValid).toBe(true);
     });
 
@@ -243,7 +257,7 @@ describe('MagicLinkFlowHandler', () => {
         state: 'test-state',
       });
 
-      const isValid = await handler.validate(params);
+      const isValid = await handler.validate(params, mockConfig);
       expect(isValid).toBe(true);
     });
 
@@ -252,7 +266,7 @@ describe('MagicLinkFlowHandler', () => {
         other_param: 'value',
       });
 
-      const isValid = await handler.validate(params);
+      const isValid = await handler.validate(params, mockConfig);
       expect(isValid).toBe(false);
     });
 
@@ -262,7 +276,7 @@ describe('MagicLinkFlowHandler', () => {
         error: 'access_denied',
       });
 
-      const isValid = await handler.validate(params);
+      const isValid = await handler.validate(params, mockConfig);
       expect(isValid).toBe(false);
     });
 
@@ -273,14 +287,14 @@ describe('MagicLinkFlowHandler', () => {
         error_description: 'Invalid request',
       });
 
-      const isValid = await handler.validate(params);
+      const isValid = await handler.validate(params, mockConfig);
       expect(isValid).toBe(false);
     });
   });
 
   describe('properties', () => {
     it('should have correct name and priority', () => {
-      expect(handler.name).toBe('magic_link');
+      expect(handler.name).toBe('test_magic_link');
       expect(handler.priority).toBe(25); // FLOW_PRIORITIES.HIGH
     });
   });
@@ -373,26 +387,30 @@ describe('MagicLinkLoginFlowHandler', () => {
   });
 });
 
-describe('MagicLinkRegistrationFlowHandler', () => {
-  let handler: MagicLinkRegistrationFlowHandler;
+describe('MagicLinkVerifyFlowHandler', () => {
+  let handler: MagicLinkVerifyFlowHandler;
   let mockAdapters: ReturnType<typeof createMockAdapters>;
   let mockConfig: ReturnType<typeof createMockConfig>;
 
   beforeEach(() => {
-    handler = new MagicLinkRegistrationFlowHandler();
+    handler = new MagicLinkVerifyFlowHandler();
     mockAdapters = createMockAdapters();
     mockConfig = createMockConfig();
   });
 
   describe('canHandle', () => {
-    it('should handle magic link registration flow', () => {
+    it('should handle magic link verify flow', () => {
       const params = new URLSearchParams({
         magic_link_token: 'test-magic-token',
-        flow: 'registration',
+        flow: 'verify',
       });
 
       expect(handler.canHandle(params, mockConfig)).toBe(true);
     });
+
+
+
+
 
     it('should not handle magic link login flow', () => {
       const params = new URLSearchParams({
@@ -414,7 +432,7 @@ describe('MagicLinkRegistrationFlowHandler', () => {
     it('should handle token parameter', () => {
       const params = new URLSearchParams({
         token: 'test-magic-token',
-        flow: 'registration',
+        flow: 'verify',
       });
 
       expect(handler.canHandle(params, mockConfig)).toBe(true);
@@ -422,7 +440,7 @@ describe('MagicLinkRegistrationFlowHandler', () => {
 
     it('should not handle without token parameter', () => {
       const params = new URLSearchParams({
-        flow: 'registration',
+        flow: 'verify',
       });
 
       expect(handler.canHandle(params, mockConfig)).toBe(false);
@@ -430,10 +448,10 @@ describe('MagicLinkRegistrationFlowHandler', () => {
   });
 
   describe('handle', () => {
-    it('should delegate to MagicLinkFlowHandler', async () => {
+    it('should handle verify flow', async () => {
       const params = new URLSearchParams({
         token: 'test-magic-token',
-        flow: 'registration',
+        flow: 'verify',
       });
 
       // Mock successful token exchange
@@ -450,11 +468,13 @@ describe('MagicLinkRegistrationFlowHandler', () => {
       const result = await handler.handle(params, mockAdapters, mockConfig);
       expect(result.success).toBe(true);
     });
+
+
   });
 
   describe('properties', () => {
     it('should have correct name and priority', () => {
-      expect(handler.name).toBe('magic_link_registration');
+      expect(handler.name).toBe('magic_link_verify');
       expect(handler.priority).toBe(25); // FLOW_PRIORITIES.HIGH
     });
   });

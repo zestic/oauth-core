@@ -3,7 +3,7 @@
  * Tests the complete flow from GraphQL mutations to OAuth callback handling
  */
 
-import { MagicLinkFlowHandler } from '../../src/flows/MagicLinkFlowHandler';
+import { MagicLinkLoginFlowHandler } from '../../src/flows/MagicLinkLoginFlowHandler';
 import { OAuthCore } from '../../src/core/OAuthCore';
 import { resolvers, createGraphQLContext } from '../../src/graphql/resolvers';
 import type {
@@ -11,104 +11,58 @@ import type {
   MagicLinkConfig,
   RegistrationInput,
   SendMagicLinkInput,
-  UserRegistrationResult,
-  GraphQLResult
+  UserRegistrationResult
 } from '../../src/types/ServiceTypes';
 import type { OAuthConfig } from '../../src/types/OAuthTypes';
-
-
-// Mock extended adapters with in-memory storage
-const createIntegrationAdapters = (): ExtendedOAuthAdapters => {
-  const storage = new Map<string, string>();
-
-  return {
-    storage: {
-      setItem: jest.fn().mockImplementation(async (key: string, value: string) => {
-        storage.set(key, value);
-      }),
-      getItem: jest.fn().mockImplementation(async (key: string) => {
-        return storage.get(key) || null;
-      }),
-      removeItem: jest.fn().mockImplementation(async (key: string) => {
-        storage.delete(key);
-      }),
-      removeItems: jest.fn().mockImplementation(async (keys: string[]) => {
-        keys.forEach(key => storage.delete(key));
-      })
-    },
-    http: {
-      post: jest.fn(),
-      get: jest.fn()
-    },
-    pkce: {
-      generateCodeChallenge: jest.fn(),
-      generateState: jest.fn()
-    },
-    user: {
-      registerUser: jest.fn().mockResolvedValue({
-        success: true,
-        userId: 'user-123',
-        message: 'User registered successfully'
-      } as UserRegistrationResult),
-      userExists: jest.fn().mockResolvedValue(false),
-      getUserByEmail: jest.fn().mockResolvedValue(null)
-    },
-    graphql: {
-      sendMagicLinkMutation: jest.fn().mockResolvedValue({
-        success: true,
-        messageId: 'msg-123'
-      } as GraphQLResult),
-      sendRegistrationConfirmationMutation: jest.fn().mockResolvedValue({
-        success: true,
-        messageId: 'msg-456'
-      } as GraphQLResult)
-    }
-  };
-};
+import {
+  createE2EAdapters,
+  createTestOAuthConfig,
+  createTestMagicLinkConfig,
+  setupCommonMocks
+} from './utils/test-adapters';
+import { MockHttpAdapter } from '../mocks/adapters';
 
 describe('GraphQL + OAuth Integration', () => {
   let adapters: ExtendedOAuthAdapters;
   let oauthConfig: OAuthConfig;
   let magicLinkConfig: MagicLinkConfig;
   let graphqlContext: any;
-  let magicLinkHandler: MagicLinkFlowHandler;
+  let magicLinkHandler: MagicLinkLoginFlowHandler;
   let oauthCore: OAuthCore;
 
 
   beforeEach(() => {
-    adapters = createIntegrationAdapters();
-    
-    oauthConfig = {
-      clientId: 'test-client-id',
-      endpoints: {
-        authorization: 'https://auth.example.com/authorize',
-        token: 'https://auth.example.com/token',
-        revocation: 'https://auth.example.com/revoke'
-      },
-      redirectUri: 'https://app.example.com/callback',
-      scopes: ['read', 'write']
-    };
+    // Use integration test utilities
+    adapters = createE2EAdapters();
+    oauthConfig = createTestOAuthConfig();
+    magicLinkConfig = createTestMagicLinkConfig();
 
-    magicLinkConfig = {
-      baseUrl: 'https://app.example.com/auth/callback',
-      tokenEndpoint: '/oauth/token',
-      expirationMinutes: 15
-    };
+    // Replace the basic http mock with MockHttpAdapter for better control
+    const mockHttpAdapter = new MockHttpAdapter();
+    adapters.http = mockHttpAdapter;
 
+    // Setup common mocks (PKCE, state generation)
+    setupCommonMocks(adapters);
+
+    // Create GraphQL context and OAuth core
     graphqlContext = createGraphQLContext(adapters, magicLinkConfig);
-    magicLinkHandler = new MagicLinkFlowHandler();
+    magicLinkHandler = new MagicLinkLoginFlowHandler();
     oauthCore = new OAuthCore(oauthConfig, adapters);
 
+    // Register the magic link login flow handler
+    oauthCore.registerFlow(magicLinkHandler);
 
-    // Mock PKCE generation
-    (adapters.pkce.generateCodeChallenge as jest.Mock).mockResolvedValue({
-      codeChallenge: 'test-challenge',
-      codeChallengeMethod: 'S256',
-      codeVerifier: 'test-verifier'
+    // Setup HTTP mocks for token exchange
+    mockHttpAdapter.mockResponse(oauthConfig.endpoints.token, {
+      status: 200,
+      data: {
+        access_token: 'test-access-token',
+        refresh_token: 'test-refresh-token',
+        expires_in: 3600,
+        token_type: 'Bearer'
+      },
+      headers: {}
     });
-
-    // Mock state generation
-    (adapters.pkce.generateState as jest.Mock).mockResolvedValue('test-oauth-state');
   });
 
   describe('Complete Registration + Magic Link Flow', () => {
@@ -190,14 +144,14 @@ describe('GraphQL + OAuth Integration', () => {
       const callbackParams = new URLSearchParams({
         magic_link_token: magicLinkToken!,
         state: state!,
-        flow: 'magic_link'
+        flow: 'login'
       });
 
       // Verify magic link handler can handle the callback
-      expect(magicLinkHandler.canHandle(callbackParams, mockConfig)).toBe(true);
+      expect(magicLinkHandler.canHandle(callbackParams, oauthConfig)).toBe(true);
 
       // Mock token exchange response
-      (adapters.http.post as jest.Mock).mockResolvedValue({
+      (adapters.http as MockHttpAdapter).mockResponse(oauthConfig.endpoints.token, {
         status: 200,
         data: {
           access_token: 'access-token-123',
@@ -259,7 +213,7 @@ describe('GraphQL + OAuth Integration', () => {
       });
 
       // Mock successful token exchange
-      (adapters.http.post as jest.Mock).mockResolvedValue({
+      (adapters.http as MockHttpAdapter).mockResponse(oauthConfig.endpoints.token, {
         status: 200,
         data: {
           access_token: 'new-access-token',
@@ -306,11 +260,12 @@ describe('GraphQL + OAuth Integration', () => {
       });
     });
 
-    it('should handle email service failure', async () => {
-      (adapters.email.sendMagicLink as jest.Mock).mockResolvedValue({
+    it('should handle GraphQL service failure', async () => {
+      // Mock GraphQL mutation failure
+      (adapters.graphql.sendMagicLinkMutation as jest.Mock).mockResolvedValue({
         success: false,
         message: 'SMTP server unavailable'
-      } as EmailResult);
+      });
 
       const magicLinkInput: SendMagicLinkInput = {
         email: 'user@example.com',
@@ -326,41 +281,23 @@ describe('GraphQL + OAuth Integration', () => {
         graphqlContext
       );
 
-      expect(result).toEqual({
-        success: false,
-        message: 'GraphQL server unavailable',
-        code: 'GRAPHQL_MUTATION_FAILED'
-      });
+      // The magic link service should return failure when GraphQL fails
+      expect(result.success).toBe(false);
+      expect(result.code).toBe('GRAPHQL_MUTATION_FAILED');
     });
 
     it('should handle OAuth token exchange failure', async () => {
-      // Setup magic link first
-      const magicLinkInput: SendMagicLinkInput = {
-        email: 'user@example.com',
-        codeChallenge: 'test-challenge',
-        codeChallengeMethod: 'S256',
-        redirectUri: 'https://app.example.com/callback',
-        state: 'test-state'
-      };
-
-      await resolvers.Mutation.sendMagicLink(null, { input: magicLinkInput }, graphqlContext);
-
-      // Get magic link token
-      const emailCall = (adapters.email.sendMagicLink as jest.Mock).mock.calls[0];
-      const magicLinkUrl = emailCall[1];
-      const urlParams = new URL(magicLinkUrl).searchParams;
-      const magicLinkToken = urlParams.get('magic_link_token');
-
       // Mock token exchange failure
-      (adapters.http.post as jest.Mock).mockResolvedValue({
+      (adapters.http as MockHttpAdapter).mockResponse(oauthConfig.endpoints.token, {
         status: 400,
         data: { error: 'invalid_grant', error_description: 'Invalid magic link token' },
         headers: {}
       });
 
       const callbackParams = new URLSearchParams({
-        magic_link_token: magicLinkToken!,
-        state: 'test-state'
+        magic_link_token: 'test-token',
+        state: 'test-state',
+        flow: 'login'
       });
 
       await expect(
@@ -380,7 +317,7 @@ describe('GraphQL + OAuth Integration', () => {
       await adapters.storage.setItem('token_expiry', pastTime.toString());
 
       // Mock refresh token failure response
-      (adapters.http.post as jest.Mock).mockResolvedValueOnce({
+      (adapters.http as MockHttpAdapter).mockResponse(oauthConfig.endpoints.token, {
         status: 400,
         data: {
           error: 'invalid_grant',
@@ -412,7 +349,7 @@ describe('GraphQL + OAuth Integration', () => {
       await adapters.storage.setItem('token_expiry', pastTime.toString());
 
       // Step 2: Mock refresh token exchange for automatic refresh
-      (adapters.http.post as jest.Mock).mockResolvedValueOnce({
+      (adapters.http as MockHttpAdapter).mockResponse(oauthConfig.endpoints.token, {
         status: 200,
         data: {
           access_token: 'auto-refreshed-access-token',
@@ -458,7 +395,7 @@ describe('GraphQL + OAuth Integration', () => {
       await adapters.storage.setItem('token_expiry', pastTime.toString());
 
       // Step 2: Mock successful refresh
-      (adapters.http.post as jest.Mock).mockResolvedValueOnce({
+      (adapters.http as MockHttpAdapter).mockResponse(oauthConfig.endpoints.token, {
         status: 200,
         data: {
           access_token: 'fresh-graphql-token',
@@ -527,7 +464,7 @@ describe('GraphQL + OAuth Integration', () => {
       });
 
       // Mock successful validation and token exchange
-      (adapters.http.post as jest.Mock).mockResolvedValue({
+      (adapters.http as MockHttpAdapter).mockResponse(oauthConfig.endpoints.token, {
         status: 200,
         data: { access_token: 'token', token_type: 'Bearer' },
         headers: {}

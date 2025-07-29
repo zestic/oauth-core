@@ -5,6 +5,8 @@
 import { OAuthCore } from '../../src/core/OAuthCore';
 import { createMockAdapters, createMockConfig, MockHttpAdapter } from '../mocks/adapters';
 import { OAuthError } from '../../src/types/OAuthTypes';
+import { MagicLinkLoginFlowHandler } from '../../src/flows/MagicLinkLoginFlowHandler';
+import { MagicLinkVerifyFlowHandler } from '../../src/flows/MagicLinkVerifyFlowHandler';
 
 describe('OAuthCore', () => {
   let oauthCore: OAuthCore;
@@ -18,28 +20,40 @@ describe('OAuthCore', () => {
   });
 
   describe('initialization', () => {
-    it('should initialize with default flow handlers', () => {
+    it('should initialize with no default flow handlers', () => {
+      const flows = oauthCore.getRegisteredFlows();
+      expect(flows).toHaveLength(0);
+    });
+
+    it('should allow manual registration of flow handlers', () => {
+      const loginHandler = new MagicLinkLoginFlowHandler();
+      oauthCore.registerFlow(loginHandler);
+
       const flows = oauthCore.getRegisteredFlows();
       expect(flows).toHaveLength(1);
-      expect(flows.map(f => f.name)).toContain('magic_link');
+      expect(flows.map(f => f.name)).toContain('magic_link_login');
     });
 
     it('should initialize with custom flow configuration', () => {
       const customCore = new OAuthCore(mockConfig, mockAdapters, {
-        enabledFlows: ['magic_link'],
+        enabledFlows: ['magic_link_login'],
       });
+
+      // Manually register the flow handler
+      const loginHandler = new MagicLinkLoginFlowHandler();
+      customCore.registerFlow(loginHandler);
 
       const flows = customCore.getRegisteredFlows();
       expect(flows).toHaveLength(1);
-      expect(flows[0]?.name).toBe('magic_link');
+      expect(flows[0]?.name).toBe('magic_link_login');
     });
 
-    it('should throw error if no flows are enabled', () => {
+    it('should not throw error during initialization even with no flows', () => {
       expect(() => {
         new OAuthCore(mockConfig, mockAdapters, {
-          disabledFlows: ['magic_link'],
+          disabledFlows: ['magic_link_login'],
         });
-      }).toThrow(OAuthError);
+      }).not.toThrow();
     });
 
     it('should handle disabled flows configuration', () => {
@@ -47,9 +61,13 @@ describe('OAuthCore', () => {
         disabledFlows: [],
       });
 
+      // Manually register a flow handler
+      const loginHandler = new MagicLinkLoginFlowHandler();
+      customCore.registerFlow(loginHandler);
+
       const flows = customCore.getRegisteredFlows();
       expect(flows).toHaveLength(1);
-      expect(flows[0]?.name).toBe('magic_link');
+      expect(flows[0]?.name).toBe('magic_link_login');
     });
 
     it('should handle empty enabledFlows configuration', () => {
@@ -57,7 +75,7 @@ describe('OAuthCore', () => {
         new OAuthCore(mockConfig, mockAdapters, {
           enabledFlows: [],
         });
-      }).toThrow(OAuthError);
+      }).not.toThrow();
     });
 
     it('should register custom flows', () => {
@@ -99,6 +117,12 @@ describe('OAuthCore', () => {
 
   describe('handleCallback', () => {
     beforeEach(() => {
+      // Register flow handlers for callback tests
+      const loginHandler = new MagicLinkLoginFlowHandler();
+      const verifyHandler = new MagicLinkVerifyFlowHandler();
+      oauthCore.registerFlow(loginHandler);
+      oauthCore.registerFlow(verifyHandler);
+
       // Mock successful token response
       (mockAdapters.http as MockHttpAdapter).mockResponse(mockConfig.endpoints.token, {
         status: 200,
@@ -138,9 +162,10 @@ describe('OAuthCore', () => {
     it('should use explicit flow when specified', async () => {
       const params = new URLSearchParams({
         token: 'test-magic-token',
+        flow: 'login',
       });
 
-      const result = await oauthCore.handleCallback(params, 'magic_link');
+      const result = await oauthCore.handleCallback(params, 'magic_link_login');
 
       expect(result.success).toBe(true);
     });
@@ -448,18 +473,30 @@ describe('OAuthCore', () => {
     });
 
     it('should unregister flow handler', () => {
-      oauthCore.unregisterFlow('magic_link');
+      // First register a handler to unregister
+      const loginHandler = new MagicLinkLoginFlowHandler();
+      oauthCore.registerFlow(loginHandler);
+
+      // Then unregister it
+      oauthCore.unregisterFlow('magic_link_login');
 
       const flows = oauthCore.getRegisteredFlows();
-      expect(flows.map(f => f.name)).not.toContain('magic_link');
+      expect(flows.map(f => f.name)).not.toContain('magic_link_login');
     });
 
     it('should get compatible handlers', () => {
-      const params = new URLSearchParams({ token: 'test-magic-token' });
+      // Register a handler first
+      const loginHandler = new MagicLinkLoginFlowHandler();
+      oauthCore.registerFlow(loginHandler);
+
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+        flow: 'login'
+      });
       const handlers = oauthCore.getCompatibleHandlers(params);
 
       expect(handlers).toHaveLength(1);
-      expect(handlers[0]?.name).toBe('magic_link');
+      expect(handlers[0]?.name).toBe('magic_link_login');
     });
   });
 });

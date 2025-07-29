@@ -29,7 +29,7 @@ export interface CallbackFlowRegistryOptions {
 export interface MagicLinkFlowParams {
   token?: string;
   magic_link_token?: string;
-  flow?: 'login' | 'registration';
+  flow?: 'login' | 'verify';
   state?: string;
   error?: string;
   error_description?: string;
