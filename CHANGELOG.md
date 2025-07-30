@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-07-30
+
+### ⚠️ BREAKING CHANGES
+- **OAuthCore Initialization**: OAuthCore no longer automatically registers any flow handlers. You must now manually register specific handlers like `MagicLinkLoginFlowHandler` or `MagicLinkVerifyFlowHandler`
+- **Magic Link Parameter Naming**: Magic link tokens now use the 'token' parameter name instead of 'magic_link_token' for consistency
+
+### Added
+- **New Magic Link Flow Handlers**: Complete refactoring of magic link authentication flows
+  - `MagicLinkRegisteredFlowHandler` for registered user flows
+  - `MagicLinkLoginFlowHandler` for dedicated login flows
+  - `MagicLinkVerifyFlowHandler` for dedicated verification flows
+  - `BaseMagicLinkFlowHandler` as shared base class for common functionality
+- **Comprehensive Integration Tests**: Added extensive integration tests for all magic link flows
+- **Enhanced Flow Architecture**: All flows now perform token exchange and start automatic API refresh loops
+
+### Security
+- **ReDoS Vulnerability Fix**: Fixed Regular Expression Denial of Service vulnerabilities in email validation
+- **Enhanced Parameter Validation**: Improved validation and sanitization across all flow handlers
+- **Consistent Token Handling**: Standardized token parameter naming for better security practices
+
+### Improved
+- **Massive Test Coverage Improvements**: Achieved exceptional test coverage metrics
+  - Statement coverage: 97.62% (up from ~86%)
+  - Branch coverage: 89.51% (significant improvement)
+  - Function coverage: 98.78%
+  - 492 total tests passing with comprehensive error handling and edge case coverage
+- **Better Error Handling**: Enhanced error handling across all components with graceful failure modes
+- **Test Infrastructure**: Reorganized test structure with dedicated integration test directory
+- **Code Quality**: Improved TypeScript types and eliminated linting issues
+
+### Fixed
+- **Magic Link Parameter Consistency**: Fixed parameter naming inconsistencies in magic link flows
+- **Test Reliability**: Resolved various test failures and improved test stability
+- **Flow Handler Registration**: Fixed issues with flow handler validation and registration
+- **Integration Test Coverage**: Enhanced end-to-end testing scenarios for complete OAuth workflows
+
 ## [0.3.0] - 2025-01-22
 
 ### Added
