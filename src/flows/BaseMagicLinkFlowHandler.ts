@@ -88,7 +88,7 @@ export abstract class BaseMagicLinkFlowHandler extends BaseCallbackFlowHandler {
         }
 
         // Build additional parameters for the token exchange
-        const additionalParams = this.buildAdditionalParams(params, flow);
+        const additionalParams = await this.buildAdditionalParams(params, flow, adapters);
 
         // Exchange magic link token for OAuth tokens
         const result = await this.exchangeMagicLinkToken(token, additionalParams, adapters, config);
@@ -128,7 +128,7 @@ export abstract class BaseMagicLinkFlowHandler extends BaseCallbackFlowHandler {
   /**
    * Build additional parameters for token exchange
    */
-  protected buildAdditionalParams(params: URLSearchParams, flow?: string): Record<string, string> {
+  protected async buildAdditionalParams(params: URLSearchParams, flow: string | undefined, adapters: OAuthAdapters): Promise<Record<string, string>> {
     const additionalParams: Record<string, string> = {};
 
     // Include flow type if specified
@@ -136,10 +136,21 @@ export abstract class BaseMagicLinkFlowHandler extends BaseCallbackFlowHandler {
       additionalParams.flow = flow;
     }
 
-    // Include any PKCE parameters that might be present
+    // Retrieve PKCE code_verifier from storage (where it was stored during generation)
+    try {
+      const storedCodeVerifier = await adapters.storage.getItem('pkce_code_verifier');
+      if (storedCodeVerifier) {
+        additionalParams.codeVerifier = storedCodeVerifier;
+      }
+    } catch (error) {
+      // If storage retrieval fails, continue without code_verifier
+      // This ensures the flow doesn't break if storage is unavailable
+    }
+
+    // Include any PKCE parameters that might be present in URL (fallback for legacy support)
     const codeChallenge = params.get('code_challenge');
     const codeChallengeMethod = params.get('code_challenge_method');
-    const codeVerifier = params.get('code_verifier');
+    const urlCodeVerifier = params.get('code_verifier');
     const state = params.get('state');
 
     if (codeChallenge) {
@@ -150,8 +161,10 @@ export abstract class BaseMagicLinkFlowHandler extends BaseCallbackFlowHandler {
       additionalParams.code_challenge_method = codeChallengeMethod;
     }
 
-    if (codeVerifier) {
-      additionalParams.code_verifier = codeVerifier;
+    // Only use URL code_verifier if we didn't get one from storage
+    // This maintains backward compatibility but prioritizes the secure storage approach
+    if (urlCodeVerifier && !additionalParams.codeVerifier) {
+      additionalParams.codeVerifier = urlCodeVerifier;
     }
 
     if (state) {
