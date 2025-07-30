@@ -190,12 +190,41 @@ describe('BaseMagicLinkFlowHandler', () => {
         .rejects.toThrow(OAuthError);
     });
 
-    it('should handle flow with PKCE parameters', async () => {
+    it('should retrieve code_verifier from storage for token exchange', async () => {
       const params = new URLSearchParams({
         token: 'test-magic-token',
         code_challenge: 'test-challenge',
         code_challenge_method: 'S256',
-        code_verifier: 'test-verifier',
+        state: 'test-state',
+      });
+
+      // Store PKCE code_verifier in storage (as it would be during PKCE generation)
+      await mockAdapters.storage.setItem('pkce_code_verifier', 'stored-code-verifier');
+
+      // Mock valid state
+      await mockAdapters.storage.setItem('oauth_state', 'test-state');
+      await mockAdapters.storage.setItem('oauth_state_expiry', (Date.now() + 300000).toString());
+
+      const result = await handler.handle(params, mockAdapters, mockConfig);
+      expect(result.success).toBe(true);
+
+      // Verify that the token exchange request included the code_verifier from storage
+      const history = (mockAdapters.http as MockHttpAdapter).getRequestHistory();
+      expect(history).toHaveLength(1);
+      expect(history[0].data).toEqual(expect.objectContaining({
+        grant_type: 'magic_link',
+        token: 'test-magic-token',
+        client_id: mockConfig.clientId,
+        code_verifier: 'stored-code-verifier', // Should come from storage, not URL
+      }));
+    });
+
+    it('should handle flow with PKCE parameters from URL (legacy fallback)', async () => {
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+        code_challenge: 'test-challenge',
+        code_challenge_method: 'S256',
+        code_verifier: 'url-code-verifier', // This is not recommended but should still work
         state: 'test-state',
       });
 
@@ -214,6 +243,31 @@ describe('BaseMagicLinkFlowHandler', () => {
 
       const result = await handler.handle(params, mockAdapters, mockConfig);
       expect(result.success).toBe(true);
+    });
+
+    it('should work when code_verifier is not in storage', async () => {
+      const params = new URLSearchParams({
+        token: 'test-magic-token',
+        state: 'test-state',
+      });
+
+      // Mock valid state but no PKCE data in storage
+      await mockAdapters.storage.setItem('oauth_state', 'test-state');
+      await mockAdapters.storage.setItem('oauth_state_expiry', (Date.now() + 300000).toString());
+
+      const result = await handler.handle(params, mockAdapters, mockConfig);
+      expect(result.success).toBe(true);
+
+      // Verify that the token exchange request works without code_verifier
+      const history = (mockAdapters.http as MockHttpAdapter).getRequestHistory();
+      expect(history).toHaveLength(1);
+      expect(history[0].data).toEqual(expect.objectContaining({
+        grant_type: 'magic_link',
+        token: 'test-magic-token',
+        client_id: mockConfig.clientId,
+      }));
+      // Should not include code_verifier
+      expect(history[0].data).not.toHaveProperty('code_verifier');
     });
   });
 
