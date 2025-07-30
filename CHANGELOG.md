@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2025-07-30
+
+### Fixed
+- **PKCE Code Verifier Storage**: Fixed critical bug in magic link flows where `code_verifier` was only retrieved from URL parameters instead of secure storage
+  - Updated `BaseMagicLinkFlowHandler.buildAdditionalParams` to properly retrieve `code_verifier` from storage where it was securely stored during PKCE generation
+  - Made `buildAdditionalParams` method async to support storage operations
+  - Added proper error handling for storage failures with graceful fallback
+  - Maintained backward compatibility with URL parameters as fallback for legacy support
+  - Fixed security issue where `code_verifier` was only checked in URL params, potentially exposing sensitive PKCE data
+  - Added comprehensive tests for storage retrieval scenarios and edge cases
+
+### Improved
+- **Enhanced Test Coverage**: Added 3 new comprehensive test cases covering:
+  - Storage-based `code_verifier` retrieval during token exchange
+  - Legacy URL parameter fallback behavior
+  - Graceful handling when `code_verifier` is not available in storage
+- **Security**: Prioritized secure storage approach over URL parameters for PKCE `code_verifier` handling
+- **Error Handling**: Improved robustness when storage operations fail during magic link flows
+
 ## [0.4.0] - 2025-07-30
 
 ### ⚠️ BREAKING CHANGES
