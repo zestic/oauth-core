@@ -10,8 +10,7 @@ import {
   OAuthConfig,
   OAuthAdapters,
   OAuthResult,
-  FlowConfiguration,
-  OAUTH_ERROR_CODES
+  FlowConfiguration
 } from '../types/OAuthTypes';
 import { CallbackFlowHandler } from '../types/CallbackFlowTypes';
 import { ErrorHandler } from '../utils/ErrorHandler';
@@ -28,6 +27,14 @@ import {
   OAUTH_OPERATIONS,
   OAuthTokens
 } from '../events/OAuthEvents';
+import {
+  OAuthError,
+  TokenError,
+  ValidationError,
+  FlowError,
+  ErrorFactory,
+  OAUTH_ERROR_CODES
+} from '../errors';
 
 export class OAuthCore implements OAuthEventEmitter {
   private flowRegistry: CallbackFlowRegistry;
@@ -155,14 +162,32 @@ export class OAuthCore implements OAuthEventEmitter {
   }
 
   private createAuthErrorData(error: Error, operation?: string, retryCount?: number): AuthErrorData {
+    let oauthError: OAuthError;
+
+    if (OAuthError.isOAuthError(error)) {
+      oauthError = error;
+    } else {
+      // Convert generic Error to structured OAuthError
+      oauthError = ErrorFactory.fromError(
+        error,
+        'auth',
+        OAUTH_ERROR_CODES.TOKEN_ERROR,
+        this.isRecoverableError(error)
+      );
+    }
+
+    // Add operation and retry count to metadata
+    if (operation || retryCount !== undefined) {
+      oauthError = oauthError.withContext({
+        operation,
+        retryCount
+      });
+    }
+
     return {
-      error: ErrorHandler.isOAuthError(error) ? error : ErrorHandler.createError(
-        error.message,
-        OAUTH_ERROR_CODES.TOKEN_EXCHANGE_FAILED,
-        error
-      ),
+      error: oauthError,
       operation,
-      recoverable: this.isRecoverableError(error),
+      recoverable: oauthError.canRetry(),
       retryCount
     };
   }
@@ -288,25 +313,28 @@ export class OAuthCore implements OAuthEventEmitter {
       return result;
 
     } catch (error) {
-      console.error('[OAuthCore] Callback handling failed:', ErrorHandler.formatError(error));
+      console.error('[OAuthCore] Callback handling failed:', error);
 
       this.setAuthStatus('error');
       this.endOperation(loadingContext, false);
 
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
       const authErrorData = this.createAuthErrorData(
-        error instanceof Error ? error : new Error(String(error)),
+        normalizedError,
         OAUTH_OPERATIONS.HANDLE_CALLBACK
       );
       this.emit('authError', authErrorData);
 
-      if (ErrorHandler.isOAuthError(error)) {
+      // If it's already a structured OAuth error, re-throw it
+      if (OAuthError.isOAuthError(error)) {
         throw error;
       }
 
-      throw ErrorHandler.createError(
-        `OAuth callback handling failed: ${error instanceof Error ? error.message : String(error)}`,
-        OAUTH_ERROR_CODES.TOKEN_EXCHANGE_FAILED,
-        error instanceof Error ? error : undefined
+      // Create a structured flow error for callback handling failures
+      throw FlowError.executionFailed(
+        'callback_handling',
+        normalizedError,
+        true // Callback failures are retryable
       );
     }
   }
@@ -373,20 +401,23 @@ export class OAuthCore implements OAuthEventEmitter {
       return { url, state };
 
     } catch (error) {
-      console.error('[OAuthCore] Failed to generate authorization URL:', ErrorHandler.formatError(error));
+      console.error('[OAuthCore] Failed to generate authorization URL:', error);
 
       this.endOperation(loadingContext, false);
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
       const authErrorData = this.createAuthErrorData(
-        error instanceof Error ? error : new Error(String(error)),
+        normalizedError,
         OAUTH_OPERATIONS.GENERATE_AUTH_URL
       );
       this.emit('authError', authErrorData);
 
-      throw ErrorHandler.createError(
-        `Failed to generate authorization URL: ${error instanceof Error ? error.message : String(error)}`,
-        OAUTH_ERROR_CODES.MISSING_PKCE,
-        error instanceof Error ? error : undefined
-      );
+      // If it's already a structured OAuth error, re-throw it
+      if (OAuthError.isOAuthError(error)) {
+        throw error;
+      }
+
+      // Create a structured validation error for URL generation failures
+      throw ValidationError.missingRequiredParameter('pkce_parameters');
     }
   }
 
@@ -422,10 +453,7 @@ export class OAuthCore implements OAuthEventEmitter {
       const refreshToken = await this.tokenManager.getRefreshToken();
 
       if (!refreshToken) {
-        throw ErrorHandler.createError(
-          'No refresh token available',
-          OAUTH_ERROR_CODES.MISSING_REQUIRED_PARAMETER
-        );
+        throw TokenError.refreshTokenMissing();
       }
 
       const result = await this.tokenManager.refreshToken(refreshToken, this.config);

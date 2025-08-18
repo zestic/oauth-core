@@ -3,9 +3,13 @@
  */
 
 import { CallbackFlowHandler as ICallbackFlowHandler } from '../types/CallbackFlowTypes';
-import { OAuthConfig, OAuthAdapters, OAuthResult, OAUTH_ERROR_CODES } from '../types/OAuthTypes';
+import { OAuthConfig, OAuthAdapters, OAuthResult } from '../types/OAuthTypes';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { UrlParser } from '../utils/UrlParser';
+import {
+  ValidationError,
+  FlowError
+} from '../errors';
 
 /**
  * Abstract base class for callback flow handlers
@@ -42,13 +46,11 @@ export abstract class BaseCallbackFlowHandler implements ICallbackFlowHandler {
    */
   protected checkForOAuthError(params: URLSearchParams): void {
     if (UrlParser.hasOAuthError(params)) {
-      const { error, errorDescription } = UrlParser.extractOAuthError(params);
-      const message = errorDescription || error || 'OAuth error occurred';
-      
-      throw ErrorHandler.createError(
-        message,
-        error && typeof error === 'string' ? error as import('../types/OAuthTypes').OAuthErrorCode : OAUTH_ERROR_CODES.INVALID_GRANT
-      );
+      const { error } = UrlParser.extractOAuthError(params);
+
+      // Create structured validation error for OAuth errors
+      const errorCode = error && typeof error === 'string' ? error : 'invalid_grant';
+      throw ValidationError.invalidParameterValue('oauth_error', errorCode);
     }
   }
 
@@ -57,9 +59,9 @@ export abstract class BaseCallbackFlowHandler implements ICallbackFlowHandler {
    */
   protected validateRequiredParams(params: URLSearchParams, requiredParams: string[]): void {
     const missing = requiredParams.filter(param => !params.has(param));
-    
+
     if (missing.length > 0) {
-      throw ErrorHandler.handleMissingParameter(missing.join(', '));
+      throw FlowError.missingParameters(this.name, missing);
     }
   }
 

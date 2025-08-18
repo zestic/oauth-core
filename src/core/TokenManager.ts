@@ -8,10 +8,15 @@ import {
   TokenResponse,
   OAuthResult,
   OAuthConfig,
-  StorageAdapter,
-  OAUTH_ERROR_CODES
+  StorageAdapter
 } from '../types/OAuthTypes';
-import { ErrorHandler } from '../utils/ErrorHandler';
+import {
+  OAuthError,
+  NetworkError,
+  TokenError,
+  ErrorFactory,
+  OAUTH_ERROR_CODES
+} from '../errors';
 
 export class TokenManager {
   private static readonly STORAGE_KEYS = {
@@ -96,9 +101,12 @@ export class TokenManager {
       );
 
       if (response.status >= 400) {
-        throw ErrorHandler.handleTokenExchangeError(
-          new Error(`HTTP ${response.status}`),
-          response.data
+        // Create structured network error for HTTP failures
+        throw NetworkError.fromHttpResponse(
+          response.status,
+          response.data,
+          config.endpoints.token,
+          'POST'
         );
       }
 
@@ -115,13 +123,22 @@ export class TokenManager {
       };
 
     } catch (error) {
-      if (ErrorHandler.isOAuthError(error)) {
+      if (OAuthError.isOAuthError(error)) {
         throw error;
       }
 
-      throw ErrorHandler.handleTokenExchangeError(
-        error instanceof Error ? error : new Error(String(error))
-      );
+      // Convert generic errors to structured token errors
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+
+      // Check if it's a network-related error
+      if (normalizedError.message.includes('fetch') ||
+          normalizedError.message.includes('network') ||
+          normalizedError.message.includes('connection')) {
+        throw NetworkError.fromConnectionError(normalizedError, config.endpoints.token, 'POST');
+      }
+
+      // Default to token exchange error
+      throw TokenError.fromTokenResponse('token_exchange_failed', normalizedError.message);
     }
   }
 
@@ -192,10 +209,12 @@ export class TokenManager {
       );
 
     } catch (error) {
-      throw ErrorHandler.createError(
-        'Failed to store tokens',
-        OAUTH_ERROR_CODES.NETWORK_ERROR,
-        error instanceof Error ? error : new Error(String(error))
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      throw ErrorFactory.fromError(
+        normalizedError,
+        'token',
+        OAUTH_ERROR_CODES.TOKEN_ERROR,
+        false // Storage errors are not retryable
       );
     }
   }

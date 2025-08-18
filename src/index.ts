@@ -12,6 +12,9 @@ export { StateValidator } from './core/StateValidator';
 // Event system
 export * from './events';
 
+// Error system
+export * from './errors';
+
 // Flow handlers
 export * from './flows';
 
@@ -38,7 +41,8 @@ export type {
   FlowConfiguration
 } from './types/OAuthTypes';
 
-export { OAUTH_ERROR_CODES } from './types/OAuthTypes';
+// Legacy error codes export (now available from ./errors)
+export { OAUTH_ERROR_CODES } from './errors';
 
 export type {
   OAuthEndpoints,
