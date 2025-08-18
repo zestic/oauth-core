@@ -1,6 +1,7 @@
 import { CallbackFlowRegistry } from '../../src/core/CallbackFlowRegistry';
 import { CallbackFlowHandler } from '../../src/types/CallbackFlowTypes';
-import { OAuthError, OAuthResult } from '../../src/types/OAuthTypes';
+import { FlowError, OAuthError } from '../../src/errors';
+import { OAuthResult } from '../../src/types/OAuthTypes';
 import { createMockConfig } from '../mocks/adapters';
 
 // Mock flow handler for testing
@@ -196,7 +197,7 @@ describe('CallbackFlowRegistry', () => {
       registry.register(handler1);
       
       expect(() => registry.validateRequiredHandlers(['flow1', 'flow2', 'flow3']))
-        .toThrow(OAuthError);
+        .toThrow(FlowError);
     });
   });
 

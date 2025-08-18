@@ -10,7 +10,7 @@ export interface NetworkErrorMetadata extends OAuthErrorMetadata {
   method?: string;
   requestHeaders?: Record<string, string>;
   responseHeaders?: Record<string, string>;
-  responseBody?: any;
+  responseBody?: unknown;
   timeout?: number;
   connectionError?: boolean;
 }
@@ -164,7 +164,7 @@ export class NetworkError extends OAuthError {
    */
   static fromHttpResponse(
     statusCode: number,
-    responseBody: any,
+    responseBody: unknown,
     url?: string,
     method?: string,
     requestHeaders?: Record<string, string>,
@@ -174,12 +174,13 @@ export class NetworkError extends OAuthError {
     
     // Try to extract error message from response
     if (responseBody && typeof responseBody === 'object') {
-      if (responseBody.error_description) {
-        message += `: ${responseBody.error_description}`;
-      } else if (responseBody.error) {
-        message += `: ${responseBody.error}`;
-      } else if (responseBody.message) {
-        message += `: ${responseBody.message}`;
+      const body = responseBody as Record<string, unknown>;
+      if (typeof body.error_description === 'string') {
+        message += `: ${body.error_description}`;
+      } else if (typeof body.error === 'string') {
+        message += `: ${body.error}`;
+      } else if (typeof body.message === 'string') {
+        message += `: ${body.message}`;
       }
     }
 

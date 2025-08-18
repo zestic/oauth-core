@@ -336,7 +336,7 @@ describe('GraphQL + OAuth Integration', () => {
       await adapters.storage.removeItem('refresh_token');
 
       // Attempt to refresh should throw error
-      await expect(oauthCore.refreshAccessToken()).rejects.toThrow('No refresh token available');
+      await expect(oauthCore.refreshAccessToken()).rejects.toThrow('Refresh token is missing');
     });
 
     it('should automatically refresh tokens during API operations', async () => {

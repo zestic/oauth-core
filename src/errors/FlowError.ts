@@ -11,7 +11,7 @@ export interface FlowErrorMetadata extends OAuthErrorMetadata {
   availableFlows?: string[];
   detectionScore?: number;
   detectionReason?: string;
-  flowParameters?: Record<string, any>;
+  flowParameters?: Record<string, unknown>;
   expectedParameters?: string[];
   missingParameters?: string[];
 }
@@ -185,7 +185,7 @@ export class FlowError extends OAuthError {
    */
   static invalidParameters(
     flowName: string,
-    invalidParameters: Record<string, any>
+    invalidParameters: Record<string, unknown>
   ): FlowError {
     const paramNames = Object.keys(invalidParameters);
     return new FlowError(

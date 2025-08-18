@@ -2,7 +2,7 @@
  * PKCE (Proof Key for Code Exchange) management
  */
 
-import { PKCEAdapter, PKCEChallenge, StorageAdapter, OAUTH_ERROR_CODES } from '../types/OAuthTypes';
+import { PKCEAdapter, PKCEChallenge, StorageAdapter } from '../types/OAuthTypes';
 import { ErrorHandler } from '../utils/ErrorHandler';
 
 export class PKCEManager {
@@ -45,7 +45,7 @@ export class PKCEManager {
     } catch (error) {
       throw ErrorHandler.createError(
         'Failed to generate PKCE challenge',
-        OAUTH_ERROR_CODES.MISSING_PKCE,
+        'PKCE_GENERATION_FAILED',
         error instanceof Error ? error : new Error(String(error))
       );
     }
@@ -67,7 +67,7 @@ export class PKCEManager {
     } catch (error) {
       throw ErrorHandler.createError(
         'Failed to generate OAuth state',
-        OAUTH_ERROR_CODES.MISSING_PKCE,
+        'STATE_GENERATION_FAILED',
         error instanceof Error ? error : new Error(String(error))
       );
     }
@@ -82,7 +82,7 @@ export class PKCEManager {
     } catch (error) {
       throw ErrorHandler.createError(
         'Failed to retrieve code verifier',
-        OAUTH_ERROR_CODES.MISSING_PKCE,
+        'PKCE_RETRIEVAL_FAILED',
         error instanceof Error ? error : new Error(String(error))
       );
     }
@@ -97,7 +97,7 @@ export class PKCEManager {
     } catch (error) {
       throw ErrorHandler.createError(
         'Failed to retrieve code challenge',
-        OAUTH_ERROR_CODES.MISSING_PKCE,
+        'PKCE_RETRIEVAL_FAILED',
         error instanceof Error ? error : new Error(String(error))
       );
     }
@@ -112,7 +112,7 @@ export class PKCEManager {
     } catch (error) {
       throw ErrorHandler.createError(
         'Failed to retrieve stored state',
-        OAUTH_ERROR_CODES.INVALID_STATE,
+        'STATE_RETRIEVAL_FAILED',
         error instanceof Error ? error : new Error(String(error))
       );
     }
@@ -133,7 +133,7 @@ export class PKCEManager {
     } catch (error) {
       throw ErrorHandler.createError(
         'Failed to validate state parameter',
-        OAUTH_ERROR_CODES.INVALID_STATE,
+        'STATE_VALIDATION_FAILED',
         error instanceof Error ? error : new Error(String(error))
       );
     }
@@ -149,7 +149,7 @@ export class PKCEManager {
     } catch (error) {
       throw ErrorHandler.createError(
         'Failed to clear PKCE data',
-        OAUTH_ERROR_CODES.NETWORK_ERROR,
+        'STORAGE_CLEAR_FAILED',
         error instanceof Error ? error : new Error(String(error))
       );
     }
@@ -193,7 +193,7 @@ export class PKCEManager {
     } catch (error) {
       throw ErrorHandler.createError(
         'Failed to retrieve PKCE data',
-        OAUTH_ERROR_CODES.MISSING_PKCE,
+        'PKCE_RETRIEVAL_FAILED',
         error instanceof Error ? error : new Error(String(error))
       );
     }

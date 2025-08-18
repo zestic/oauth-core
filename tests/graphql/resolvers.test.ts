@@ -11,7 +11,7 @@ import type {
   UserRegistrationResult,
   MagicLinkResponse
 } from '../../src/types/ServiceTypes';
-import { OAuthError, OAUTH_ERROR_CODES } from '../../src/types/OAuthTypes';
+import { OAuthError } from '../../src/errors';
 import { createE2EAdapters, createTestMagicLinkConfig, setupCommonMocks } from '../integration/utils/test-adapters';
 
 describe('GraphQL Resolvers', () => {
@@ -131,7 +131,7 @@ describe('GraphQL Resolvers', () => {
       expect(result).toEqual({
         success: false,
         message: 'Missing required parameter: email',
-        code: 'missing_required_parameter'
+        code: 'VALIDATION_MISSING_PARAMETER'
       });
     });
 
@@ -502,9 +502,9 @@ describe('GraphQL Resolvers', () => {
     });
 
     it('should sanitize OAuth errors', () => {
-      const oauthError = new OAuthError('OAuth error', OAUTH_ERROR_CODES.INVALID_GRANT);
+      const oauthError = new OAuthError('OAuth error', 'TOKEN_INVALID_GRANT', 'auth');
       const result = validationHelpers.sanitizeError(oauthError);
-      expect(result).toEqual({ message: 'OAuth error', code: 'invalid_grant' });
+      expect(result).toEqual({ message: 'OAuth error', code: 'TOKEN_INVALID_GRANT' });
     });
 
     it('should sanitize non-OAuth errors', () => {

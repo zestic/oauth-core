@@ -17,7 +17,7 @@ export class ErrorFactory {
    */
   static networkError(
     statusCode: number,
-    responseBody?: any,
+    responseBody?: unknown,
     url?: string,
     method?: string
   ): NetworkError {
@@ -70,7 +70,7 @@ export class ErrorFactory {
    */
   static configInvalidValue(
     fieldName: string,
-    value: any,
+    value: unknown,
     validValues?: string[]
   ): ConfigError {
     return ConfigError.invalidFieldValue(fieldName, value, validValues);
@@ -88,8 +88,8 @@ export class ErrorFactory {
    */
   static validationInvalidParameter(
     parameterName: string,
-    actualValue: any,
-    allowedValues?: any[]
+    actualValue: unknown,
+    allowedValues?: unknown[]
   ): ValidationError {
     return ValidationError.invalidParameterValue(parameterName, actualValue, allowedValues);
   }

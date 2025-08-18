@@ -116,7 +116,7 @@ describe('OAuth Refresh Token Grant Flow End-to-End', () => {
         expect(true).toBe(false); // Should not reach here
       } catch (error) {
         expect(error).toBeDefined();
-        expect((error as Error).message).toContain('Token exchange failed');
+        expect((error as Error).message).toContain('The provided refresh token is invalid');
       }
 
       // Step 4: Verify original tokens are still in storage (not cleared on failure)
@@ -145,7 +145,7 @@ describe('OAuth Refresh Token Grant Flow End-to-End', () => {
         expect(true).toBe(false); // Should not reach here
       } catch (error) {
         expect(error).toBeDefined();
-        expect((error as Error).message).toContain('No refresh token available');
+        expect((error as Error).message).toContain('Refresh token is missing');
       }
 
       // Step 3: Verify access token is still available

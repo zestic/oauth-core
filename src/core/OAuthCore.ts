@@ -196,7 +196,7 @@ export class OAuthCore implements OAuthEventEmitter {
       return [
         'NETWORK_ERROR',
         'TOKEN_ERROR'
-      ].includes(error.code as any);
+      ].includes(error.code);
     }
     return false;
   }

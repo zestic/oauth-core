@@ -1,5 +1,5 @@
 import { StateValidator } from '../../src/core/StateValidator';
-import { OAuthError } from '../../src/types/OAuthTypes';
+import { OAuthError, ValidationError } from '../../src/errors';
 import { createMockAdapters } from '../mocks/adapters';
 
 describe('StateValidator', () => {
@@ -225,11 +225,11 @@ describe('StateValidator', () => {
       const receivedState = 'invalid-state';
       await stateValidator.storeState(storedState);
 
-      await expect(stateValidator.validateStateOrThrow(receivedState)).rejects.toThrow(OAuthError);
+      await expect(stateValidator.validateStateOrThrow(receivedState)).rejects.toThrow(ValidationError);
     });
 
     it('should throw for missing state', async () => {
-      await expect(stateValidator.validateStateOrThrow('any-state')).rejects.toThrow(OAuthError);
+      await expect(stateValidator.validateStateOrThrow('any-state')).rejects.toThrow(ValidationError);
     });
   });
 

@@ -3,8 +3,8 @@
  */
 
 import { CallbackFlowHandler, CallbackFlowDetectionResult, CallbackFlowRegistryOptions } from '../types/CallbackFlowTypes';
-import { OAuthConfig, OAUTH_ERROR_CODES } from '../types/OAuthTypes';
-import { ErrorHandler } from '../utils/ErrorHandler';
+import { OAuthConfig } from '../types/OAuthTypes';
+import { FlowError } from '../errors';
 
 export class CallbackFlowRegistry {
   private handlers = new Map<string, CallbackFlowHandler>();
@@ -23,9 +23,9 @@ export class CallbackFlowRegistry {
    */
   register(handler: CallbackFlowHandler): void {
     if (!this.options.allowDuplicates && this.handlers.has(handler.name)) {
-      throw ErrorHandler.createError(
+      throw new FlowError(
         `Flow handler '${handler.name}' is already registered`,
-        OAUTH_ERROR_CODES.INVALID_CONFIGURATION
+        'FLOW_REGISTRATION_FAILED'
       );
     }
 
@@ -157,9 +157,9 @@ export class CallbackFlowRegistry {
     const missing = requiredHandlers.filter(name => !this.hasHandler(name));
     
     if (missing.length > 0) {
-      throw ErrorHandler.createError(
+      throw new FlowError(
         `Missing required flow handlers: ${missing.join(', ')}`,
-        OAUTH_ERROR_CODES.INVALID_CONFIGURATION
+        'FLOW_VALIDATION_FAILED'
       );
     }
   }

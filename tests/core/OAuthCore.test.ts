@@ -4,7 +4,7 @@
 
 import { OAuthCore } from '../../src/core/OAuthCore';
 import { createMockAdapters, createMockConfig, MockHttpAdapter } from '../mocks/adapters';
-import { OAuthError } from '../../src/types/OAuthTypes';
+import { FlowError, TokenError, OAuthError } from '../../src/errors';
 import { MagicLinkLoginFlowHandler } from '../../src/flows/MagicLinkLoginFlowHandler';
 import { MagicLinkVerifyFlowHandler } from '../../src/flows/MagicLinkVerifyFlowHandler';
 
@@ -175,7 +175,7 @@ describe('OAuthCore', () => {
         code: 'test-code',
       });
 
-      await expect(oauthCore.handleCallback(params, 'unknown_flow')).rejects.toThrow(OAuthError);
+      await expect(oauthCore.handleCallback(params, 'unknown_flow')).rejects.toThrow(FlowError);
     });
 
     it('should throw error when no suitable handler found', async () => {
@@ -183,7 +183,7 @@ describe('OAuthCore', () => {
         unsupported: 'parameter',
       });
 
-      await expect(oauthCore.handleCallback(params)).rejects.toThrow(OAuthError);
+      await expect(oauthCore.handleCallback(params)).rejects.toThrow(FlowError);
     });
 
     it('should handle OAuth errors in parameters', async () => {
@@ -192,7 +192,7 @@ describe('OAuthCore', () => {
         error_description: 'User denied access',
       });
 
-      await expect(oauthCore.handleCallback(params)).rejects.toThrow(OAuthError);
+      await expect(oauthCore.handleCallback(params)).rejects.toThrow(FlowError);
     });
 
     it('should handle flow validation failure', async () => {
@@ -209,7 +209,7 @@ describe('OAuthCore', () => {
 
       const params = new URLSearchParams({ test: 'value' });
 
-      await expect(oauthCore.handleCallback(params, 'failing_flow')).rejects.toThrow(OAuthError);
+      await expect(oauthCore.handleCallback(params, 'failing_flow')).rejects.toThrow(FlowError);
     });
 
     it('should handle non-OAuth errors during callback', async () => {
@@ -228,7 +228,7 @@ describe('OAuthCore', () => {
 
       const params = new URLSearchParams({ test: 'value' });
 
-      await expect(oauthCore.handleCallback(params, 'error_flow')).rejects.toThrow(OAuthError);
+      await expect(oauthCore.handleCallback(params, 'error_flow')).rejects.toThrow(FlowError);
     });
 
     it('should handle non-Error objects during callback', async () => {
@@ -247,7 +247,7 @@ describe('OAuthCore', () => {
 
       const params = new URLSearchParams({ test: 'value' });
 
-      await expect(oauthCore.handleCallback(params, 'string_error_flow')).rejects.toThrow(OAuthError);
+      await expect(oauthCore.handleCallback(params, 'string_error_flow')).rejects.toThrow(FlowError);
     });
 
     it('should handle non-OAuth errors in callback', async () => {
@@ -260,7 +260,7 @@ describe('OAuthCore', () => {
         headers: {},
       });
 
-      await expect(oauthCore.handleCallback(params)).rejects.toThrow(OAuthError);
+      await expect(oauthCore.handleCallback(params)).rejects.toThrow(FlowError);
     });
 
     it('should handle string parameters in callback', async () => {
@@ -429,7 +429,7 @@ describe('OAuthCore', () => {
     it('should throw error when refreshing without refresh token', async () => {
       await mockAdapters.storage.removeItem('refresh_token');
 
-      await expect(oauthCore.refreshAccessToken()).rejects.toThrow(OAuthError);
+      await expect(oauthCore.refreshAccessToken()).rejects.toThrow(TokenError);
     });
   });
 

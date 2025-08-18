@@ -1,5 +1,5 @@
 import { PKCEManager } from '../../src/core/PKCEManager';
-import { OAuthError } from '../../src/types/OAuthTypes';
+import { OAuthError } from '../../src/errors';
 import { createMockAdapters } from '../mocks/adapters';
 
 describe('PKCEManager', () => {

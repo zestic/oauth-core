@@ -7,10 +7,10 @@ import { OAuthError, OAuthErrorMetadata } from './OAuthError';
 
 export interface ValidationErrorMetadata extends OAuthErrorMetadata {
   parameterName?: string;
-  expectedValue?: any;
-  actualValue?: any;
+  expectedValue?: unknown;
+  actualValue?: unknown;
   validationRule?: string;
-  allowedValues?: any[];
+  allowedValues?: unknown[];
   parameterType?: string;
 }
 
@@ -113,7 +113,7 @@ export class ValidationError extends OAuthError {
   static invalidParameterFormat(
     parameterName: string,
     expectedFormat: string,
-    actualValue: any
+    actualValue: unknown
   ): ValidationError {
     return new ValidationError(
       `Invalid format for parameter '${parameterName}': expected ${expectedFormat}`,
@@ -132,8 +132,8 @@ export class ValidationError extends OAuthError {
    */
   static invalidParameterValue(
     parameterName: string,
-    actualValue: any,
-    allowedValues?: any[]
+    actualValue: unknown,
+    allowedValues?: unknown[]
   ): ValidationError {
     const allowedText = allowedValues ? ` Allowed values: ${allowedValues.join(', ')}` : '';
     return new ValidationError(
@@ -154,7 +154,7 @@ export class ValidationError extends OAuthError {
   static invalidParameterType(
     parameterName: string,
     expectedType: string,
-    actualValue: any
+    actualValue: unknown
   ): ValidationError {
     const actualType = typeof actualValue;
     return new ValidationError(

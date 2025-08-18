@@ -103,7 +103,7 @@ export class EventEmitter<TEventMap = Record<string, EventCallback>> {
    */
   emit<TEvent extends keyof TEventMap>(
     event: TEvent,
-    ...args: any[]
+    ...args: unknown[]
   ): boolean {
     const eventKey = String(event);
     let hasListeners = false;

@@ -1,7 +1,7 @@
 import { BaseMagicLinkFlowHandler } from '../../src/flows/BaseMagicLinkFlowHandler';
 import { MagicLinkLoginFlowHandler, createMagicLinkLoginFlowHandler } from '../../src/flows/MagicLinkLoginFlowHandler';
 import { MagicLinkVerifyFlowHandler } from '../../src/flows/MagicLinkVerifyFlowHandler';
-import { OAuthError } from '../../src/types/OAuthTypes';
+import { ValidationError, NetworkError } from '../../src/errors';
 import { createMockAdapters, createMockConfig, MockHttpAdapter } from '../mocks/adapters';
 
 // Create a concrete implementation for testing the base class
@@ -106,7 +106,7 @@ describe('BaseMagicLinkFlowHandler', () => {
       });
 
       await expect(handler.handle(params, mockAdapters, mockConfig))
-        .rejects.toThrow(OAuthError);
+        .rejects.toThrow(ValidationError);
     });
 
     it('should throw error for OAuth error parameters', async () => {
@@ -116,7 +116,7 @@ describe('BaseMagicLinkFlowHandler', () => {
       });
 
       await expect(handler.handle(params, mockAdapters, mockConfig))
-        .rejects.toThrow(OAuthError);
+        .rejects.toThrow(ValidationError);
     });
 
     it('should validate state when present', async () => {
@@ -130,7 +130,7 @@ describe('BaseMagicLinkFlowHandler', () => {
       await mockAdapters.storage.setItem('oauth_state_expiry', (Date.now() + 300000).toString());
 
       await expect(handler.handle(params, mockAdapters, mockConfig))
-        .rejects.toThrow(OAuthError);
+        .rejects.toThrow(ValidationError);
     });
 
     it('should handle token exchange failure', async () => {
@@ -146,7 +146,7 @@ describe('BaseMagicLinkFlowHandler', () => {
       });
 
       await expect(handler.handle(params, mockAdapters, mockConfig))
-        .rejects.toThrow(OAuthError);
+        .rejects.toThrow(NetworkError);
     });
 
     it('should handle non-OAuth errors during token exchange', async () => {
@@ -162,7 +162,7 @@ describe('BaseMagicLinkFlowHandler', () => {
       });
 
       await expect(handler.handle(params, mockAdapters, mockConfig))
-        .rejects.toThrow(OAuthError);
+        .rejects.toThrow(NetworkError);
     });
 
     it('should handle state validation when no state stored', async () => {
@@ -173,7 +173,7 @@ describe('BaseMagicLinkFlowHandler', () => {
 
       // No state stored in storage
       await expect(handler.handle(params, mockAdapters, mockConfig))
-        .rejects.toThrow(OAuthError);
+        .rejects.toThrow(ValidationError);
     });
 
     it('should handle expired state', async () => {
@@ -187,7 +187,7 @@ describe('BaseMagicLinkFlowHandler', () => {
       await mockAdapters.storage.setItem('oauth_state_expiry', (Date.now() - 1000).toString()); // 1 second ago
 
       await expect(handler.handle(params, mockAdapters, mockConfig))
-        .rejects.toThrow(OAuthError);
+        .rejects.toThrow(ValidationError);
     });
 
     it('should retrieve code_verifier from storage for token exchange', async () => {

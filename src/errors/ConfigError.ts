@@ -134,7 +134,7 @@ export class ConfigError extends OAuthError {
    */
   static invalidFieldValue(
     fieldName: string,
-    value: any,
+    value: unknown,
     validValues?: string[],
     configPath?: string
   ): ConfigError {
@@ -260,7 +260,7 @@ export class ConfigError extends OAuthError {
   static validationFailed(
     fieldName: string,
     rule: string,
-    value?: any,
+    value?: unknown,
     configPath?: string
   ): ConfigError {
     return new ConfigError(

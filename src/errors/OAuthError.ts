@@ -12,7 +12,7 @@ export interface OAuthErrorMetadata {
   retryCount?: number;
   statusCode?: number;
   originalError?: Error;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   rateLimitRemaining?: number;
   rateLimitReset?: Date;
 }
@@ -90,7 +90,7 @@ export class OAuthError extends Error {
   /**
    * Add additional context to the error
    */
-  withContext(context: Record<string, any>): OAuthError {
+  withContext(context: Record<string, unknown>): OAuthError {
     return new OAuthError(
       this.message,
       this.code,
@@ -110,7 +110,7 @@ export class OAuthError extends Error {
   /**
    * Convert error to JSON for logging/serialization
    */
-  toJSON(): Record<string, any> {
+  toJSON(): Record<string, unknown> {
     return {
       name: this.name,
       message: this.message,
