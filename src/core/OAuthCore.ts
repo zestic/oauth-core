@@ -32,8 +32,7 @@ import {
   TokenError,
   ValidationError,
   FlowError,
-  ErrorFactory,
-  OAUTH_ERROR_CODES
+  ErrorFactory
 } from '../errors';
 
 export class OAuthCore implements OAuthEventEmitter {
@@ -171,7 +170,7 @@ export class OAuthCore implements OAuthEventEmitter {
       oauthError = ErrorFactory.fromError(
         error,
         'auth',
-        OAUTH_ERROR_CODES.TOKEN_ERROR,
+        'TOKEN_ERROR',
         this.isRecoverableError(error)
       );
     }
@@ -195,8 +194,8 @@ export class OAuthCore implements OAuthEventEmitter {
   private isRecoverableError(error: Error): boolean {
     if (ErrorHandler.isOAuthError(error)) {
       return [
-        OAUTH_ERROR_CODES.NETWORK_ERROR,
-        OAUTH_ERROR_CODES.TOKEN_EXCHANGE_FAILED
+        'NETWORK_ERROR',
+        'TOKEN_ERROR'
       ].includes(error.code as any);
     }
     return false;

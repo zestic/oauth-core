@@ -2,24 +2,28 @@
  * Standardized error handling for OAuth operations
  */
 
-import { OAuthError, OAUTH_ERROR_CODES, OAuthErrorCode } from '../types/OAuthTypes';
+import {
+  OAuthError,
+  ValidationError,
+  ConfigError,
+  FlowError,
+  TokenError,
+  ErrorFactory
+} from '../errors';
 
 export class ErrorHandler {
-  static createError(message: string, code: OAuthErrorCode, originalError?: Error): OAuthError {
-    return new OAuthError(message, code, originalError);
+  static createError(message: string, code: string, originalError?: Error): OAuthError {
+    const metadata = originalError ? { originalError } : {};
+    return new OAuthError(message, code, 'auth', true, undefined, metadata);
   }
 
   static handleNetworkError(error: Error): OAuthError {
-    return new OAuthError(
-      `Network error: ${error.message}`,
-      OAUTH_ERROR_CODES.NETWORK_ERROR,
-      error
-    );
+    return ErrorFactory.fromError(error, 'network', 'NETWORK_ERROR', true);
   }
 
-  static handleTokenExchangeError(error: Error, response?: unknown): OAuthError {
+  static handleTokenExchangeError(error: Error, response?: unknown): TokenError {
     let message = 'Token exchange failed';
-    
+
     if (response && typeof response === 'object' && response !== null) {
       const errorResponse = response as Record<string, unknown>;
       if (errorResponse.error_description) {
@@ -29,51 +33,50 @@ export class ErrorHandler {
       }
     }
 
-    return new OAuthError(message, OAUTH_ERROR_CODES.TOKEN_EXCHANGE_FAILED, error);
+    return new TokenError(message, 'TOKEN_ERROR', { originalError: error });
   }
 
-  static handleInvalidState(expectedState?: string, receivedState?: string): OAuthError {
+  static handleInvalidState(expectedState?: string, receivedState?: string): ValidationError {
     const message = expectedState && receivedState
       ? `Invalid state parameter. Expected: ${expectedState}, Received: ${receivedState}`
       : 'Invalid or missing state parameter';
-    
-    return new OAuthError(message, OAUTH_ERROR_CODES.INVALID_STATE);
+
+    return new ValidationError(message, 'VALIDATION_INVALID_STATE', {
+      expectedValue: expectedState,
+      actualValue: receivedState,
+      parameterName: 'state'
+    });
   }
 
-  static handleMissingParameter(parameterName: string): OAuthError {
-    return new OAuthError(
+  static handleMissingParameter(parameterName: string): ValidationError {
+    return new ValidationError(
       `Missing required parameter: ${parameterName}`,
-      OAUTH_ERROR_CODES.MISSING_REQUIRED_PARAMETER
+      'VALIDATION_MISSING_PARAMETER',
+      { parameterName }
     );
   }
 
-  static handleInvalidConfiguration(message: string): OAuthError {
-    return new OAuthError(
-      `Invalid configuration: ${message}`,
-      OAUTH_ERROR_CODES.INVALID_CONFIGURATION
-    );
+  static handleInvalidConfiguration(message: string): ConfigError {
+    return new ConfigError(`Invalid configuration: ${message}`, 'CONFIG_ERROR');
   }
 
-  static handleUnknownFlow(flowName: string): OAuthError {
-    return new OAuthError(
-      `Unknown flow: ${flowName}`,
-      OAUTH_ERROR_CODES.UNKNOWN_FLOW
-    );
+  static handleUnknownFlow(flowName: string): FlowError {
+    return new FlowError(`Unknown flow: ${flowName}`, 'FLOW_UNKNOWN', { flowName });
   }
 
-  static handleNoFlowHandler(): OAuthError {
-    return new OAuthError(
-      'No suitable flow handler found for the provided parameters',
-      OAUTH_ERROR_CODES.NO_FLOW_HANDLER
-    );
+  static handleNoFlowHandler(): FlowError {
+    return new FlowError('No suitable flow handler found for the provided parameters', 'FLOW_NO_HANDLER_FOUND');
   }
 
-  static handleFlowValidationFailed(flowName: string, reason?: string): OAuthError {
+  static handleFlowValidationFailed(flowName: string, reason?: string): FlowError {
     const message = reason
       ? `Flow validation failed for ${flowName}: ${reason}`
       : `Flow validation failed for ${flowName}`;
-    
-    return new OAuthError(message, OAUTH_ERROR_CODES.FLOW_VALIDATION_FAILED);
+
+    return new FlowError(message, 'FLOW_VALIDATION_FAILED', {
+      flowName,
+      detectionReason: reason
+    });
   }
 
   static isOAuthError(error: unknown): error is OAuthError {
@@ -105,8 +108,8 @@ export class ErrorHandler {
     
     console.error(logMessage);
     
-    if (this.isOAuthError(error) && error.originalError) {
-      console.error('Original error:', error.originalError);
+    if (this.isOAuthError(error) && error.metadata?.originalError) {
+      console.error('Original error:', error.metadata.originalError);
     }
   }
 }

@@ -1,5 +1,5 @@
 import { TokenManager } from '../../src/core/TokenManager';
-import { OAuthError } from '../../src/types/OAuthTypes';
+import { OAuthError, NetworkError } from '../../src/errors';
 import { createMockAdapters, createMockConfig, MockHttpAdapter } from '../mocks/adapters';
 
 describe('TokenManager', () => {
@@ -47,7 +47,7 @@ describe('TokenManager', () => {
 
       await expect(
         tokenManager.exchangeAuthorizationCode('invalid-code', 'test-verifier', mockConfig)
-      ).rejects.toThrow(OAuthError);
+      ).rejects.toThrow(NetworkError);
     });
 
     it('should handle network errors', async () => {
@@ -92,7 +92,7 @@ describe('TokenManager', () => {
 
       await expect(
         tokenManager.exchangeMagicLinkToken('invalid-token', mockConfig)
-      ).rejects.toThrow(OAuthError);
+      ).rejects.toThrow(NetworkError);
     });
   });
 
@@ -125,7 +125,7 @@ describe('TokenManager', () => {
 
       await expect(
         tokenManager.refreshToken('invalid-refresh-token', mockConfig)
-      ).rejects.toThrow(OAuthError);
+      ).rejects.toThrow(NetworkError);
     });
   });
 

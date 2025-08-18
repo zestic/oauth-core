@@ -14,8 +14,7 @@ import {
   OAuthError,
   NetworkError,
   TokenError,
-  ErrorFactory,
-  OAUTH_ERROR_CODES
+  ErrorFactory
 } from '../errors';
 
 export class TokenManager {
@@ -213,7 +212,7 @@ export class TokenManager {
       throw ErrorFactory.fromError(
         normalizedError,
         'token',
-        OAUTH_ERROR_CODES.TOKEN_ERROR,
+        'TOKEN_ERROR',
         false // Storage errors are not retryable
       );
     }

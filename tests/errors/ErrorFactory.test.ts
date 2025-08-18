@@ -134,7 +134,7 @@ describe('ErrorFactory', () => {
       const oauthError = ErrorFactory.fromError(originalError);
 
       expect(oauthError.type).toBe('auth');
-      expect(oauthError.code).toBe(OAUTH_ERROR_CODES.TOKEN_ERROR);
+      expect(oauthError.code).toBe('TOKEN_ERROR');
       expect(oauthError.retryable).toBe(false);
     });
   });
@@ -160,41 +160,29 @@ describe('ErrorFactory', () => {
 
   describe('Error code constants', () => {
     it('should have all required error codes', () => {
-      // Network error codes
-      expect(OAUTH_ERROR_CODES.NETWORK_ERROR).toBeDefined();
-      expect(OAUTH_ERROR_CODES.NETWORK_CONNECTION_ERROR).toBeDefined();
-      expect(OAUTH_ERROR_CODES.NETWORK_SERVER_ERROR).toBeDefined();
-      expect(OAUTH_ERROR_CODES.NETWORK_RATE_LIMITED).toBeDefined();
+      // Pre-1.0: Error codes are now string literals in the OAUTH_ERROR_CODES constant
+      expect(OAUTH_ERROR_CODES.NETWORK_ERROR).toBe('NETWORK_ERROR');
+      expect(OAUTH_ERROR_CODES.NETWORK_CONNECTION_ERROR).toBe('NETWORK_CONNECTION_ERROR');
+      expect(OAUTH_ERROR_CODES.NETWORK_SERVER_ERROR).toBe('NETWORK_SERVER_ERROR');
+      expect(OAUTH_ERROR_CODES.NETWORK_RATE_LIMITED).toBe('NETWORK_RATE_LIMITED');
 
-      // Token error codes
-      expect(OAUTH_ERROR_CODES.TOKEN_EXPIRED).toBeDefined();
-      expect(OAUTH_ERROR_CODES.TOKEN_INVALID).toBeDefined();
-      expect(OAUTH_ERROR_CODES.TOKEN_MISSING).toBeDefined();
-      expect(OAUTH_ERROR_CODES.ACCESS_TOKEN_EXPIRED).toBeDefined();
-      expect(OAUTH_ERROR_CODES.REFRESH_TOKEN_EXPIRED).toBeDefined();
+      expect(OAUTH_ERROR_CODES.TOKEN_EXPIRED).toBe('TOKEN_EXPIRED');
+      expect(OAUTH_ERROR_CODES.TOKEN_INVALID).toBe('TOKEN_INVALID');
+      expect(OAUTH_ERROR_CODES.TOKEN_MISSING).toBe('TOKEN_MISSING');
+      expect(OAUTH_ERROR_CODES.ACCESS_TOKEN_EXPIRED).toBe('ACCESS_TOKEN_EXPIRED');
+      expect(OAUTH_ERROR_CODES.REFRESH_TOKEN_EXPIRED).toBe('REFRESH_TOKEN_EXPIRED');
 
-      // Config error codes
-      expect(OAUTH_ERROR_CODES.CONFIG_MISSING_FIELD).toBeDefined();
-      expect(OAUTH_ERROR_CODES.CONFIG_INVALID_VALUE).toBeDefined();
-      expect(OAUTH_ERROR_CODES.CONFIG_VALIDATION_FAILED).toBeDefined();
+      expect(OAUTH_ERROR_CODES.CONFIG_MISSING_FIELD).toBe('CONFIG_MISSING_FIELD');
+      expect(OAUTH_ERROR_CODES.CONFIG_INVALID_VALUE).toBe('CONFIG_INVALID_VALUE');
+      expect(OAUTH_ERROR_CODES.CONFIG_VALIDATION_FAILED).toBe('CONFIG_VALIDATION_FAILED');
 
-      // Validation error codes
-      expect(OAUTH_ERROR_CODES.VALIDATION_MISSING_PARAMETER).toBeDefined();
-      expect(OAUTH_ERROR_CODES.VALIDATION_INVALID_VALUE).toBeDefined();
-      expect(OAUTH_ERROR_CODES.VALIDATION_STATE_MISMATCH).toBeDefined();
+      expect(OAUTH_ERROR_CODES.VALIDATION_MISSING_PARAMETER).toBe('VALIDATION_MISSING_PARAMETER');
+      expect(OAUTH_ERROR_CODES.VALIDATION_INVALID_VALUE).toBe('VALIDATION_INVALID_VALUE');
+      expect(OAUTH_ERROR_CODES.VALIDATION_STATE_MISMATCH).toBe('VALIDATION_STATE_MISMATCH');
 
-      // Flow error codes
-      expect(OAUTH_ERROR_CODES.FLOW_NO_HANDLER_FOUND).toBeDefined();
-      expect(OAUTH_ERROR_CODES.FLOW_VALIDATION_FAILED).toBeDefined();
-      expect(OAUTH_ERROR_CODES.FLOW_EXECUTION_FAILED).toBeDefined();
-    });
-
-    it('should maintain backward compatibility with legacy codes', () => {
-      expect(OAUTH_ERROR_CODES.INVALID_STATE).toBe('VALIDATION_INVALID_STATE');
-      expect(OAUTH_ERROR_CODES.TOKEN_EXCHANGE_FAILED).toBe('TOKEN_ERROR');
-      expect(OAUTH_ERROR_CODES.MISSING_PKCE).toBe('VALIDATION_MISSING_PARAMETER');
-      expect(OAUTH_ERROR_CODES.UNKNOWN_FLOW).toBe('FLOW_UNKNOWN');
-      expect(OAUTH_ERROR_CODES.NO_FLOW_HANDLER).toBe('FLOW_NO_HANDLER_FOUND');
+      expect(OAUTH_ERROR_CODES.FLOW_NO_HANDLER_FOUND).toBe('FLOW_NO_HANDLER_FOUND');
+      expect(OAUTH_ERROR_CODES.FLOW_VALIDATION_FAILED).toBe('FLOW_VALIDATION_FAILED');
+      expect(OAUTH_ERROR_CODES.FLOW_EXECUTION_FAILED).toBe('FLOW_EXECUTION_FAILED');
     });
   });
 

@@ -1,5 +1,6 @@
 import { BaseCallbackFlowHandler, SimpleCallbackFlowHandler, FlowHandlerFactory } from '../../src/flows/BaseCallbackFlowHandler';
-import { OAuthConfig, OAuthAdapters, OAuthResult, OAuthError } from '../../src/types/OAuthTypes';
+import { OAuthConfig, OAuthAdapters, OAuthResult } from '../../src/types/OAuthTypes';
+import { ValidationError, FlowError } from '../../src/errors';
 import { createMockAdapters, createMockConfig } from '../mocks/adapters';
 
 // Concrete implementation for testing BaseCallbackFlowHandler
@@ -60,19 +61,19 @@ describe('BaseCallbackFlowHandler', () => {
         error_description: 'User denied access'
       });
       
-      expect(() => handler['checkForOAuthError'](params)).toThrow(OAuthError);
+      expect(() => handler['checkForOAuthError'](params)).toThrow(ValidationError);
     });
 
     it('should throw for OAuth error without description', () => {
       const params = new URLSearchParams({ error: 'invalid_request' });
       
-      expect(() => handler['checkForOAuthError'](params)).toThrow(OAuthError);
+      expect(() => handler['checkForOAuthError'](params)).toThrow(ValidationError);
     });
 
     it('should handle unknown error codes', () => {
       const params = new URLSearchParams({ error: 'unknown_error' });
       
-      expect(() => handler['checkForOAuthError'](params)).toThrow(OAuthError);
+      expect(() => handler['checkForOAuthError'](params)).toThrow(ValidationError);
     });
   });
 
@@ -92,7 +93,7 @@ describe('BaseCallbackFlowHandler', () => {
       const params = new URLSearchParams({ param1: 'value1' });
       
       expect(() => handler['validateRequiredParams'](params, ['param1', 'param2', 'param3']))
-        .toThrow(OAuthError);
+        .toThrow(FlowError);
     });
 
     it('should handle empty required params array', () => {
@@ -115,14 +116,14 @@ describe('BaseCallbackFlowHandler', () => {
       const params = new URLSearchParams();
       
       expect(() => handler['getRequiredParam'](params, 'missing_param'))
-        .toThrow(OAuthError);
+        .toThrow(ValidationError);
     });
 
     it('should throw when parameter is empty string', () => {
       const params = new URLSearchParams({ empty_param: '' });
       
       expect(() => handler['getRequiredParam'](params, 'empty_param'))
-        .toThrow(OAuthError);
+        .toThrow(ValidationError);
     });
   });
 
@@ -274,14 +275,14 @@ describe('BaseCallbackFlowHandler', () => {
       });
 
       await expect(handler.handle(params, mockAdapters, mockConfig))
-        .rejects.toThrow(OAuthError);
+        .rejects.toThrow(ValidationError);
     });
 
     it('should handle missing required parameters', async () => {
       const params = new URLSearchParams(); // Missing test_param
 
       await expect(handler.handle(params, mockAdapters, mockConfig))
-        .rejects.toThrow(OAuthError);
+        .rejects.toThrow(FlowError);
     });
   });
 });

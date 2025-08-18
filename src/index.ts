@@ -41,8 +41,8 @@ export type {
   FlowConfiguration
 } from './types/OAuthTypes';
 
-// Legacy error codes export (now available from ./errors)
-export { OAUTH_ERROR_CODES } from './errors';
+// Error codes are now available from ./errors
+// No legacy exports needed for pre-1.0 library
 
 export type {
   OAuthEndpoints,
