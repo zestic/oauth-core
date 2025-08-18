@@ -9,6 +9,9 @@ export { PKCEManager } from './core/PKCEManager';
 export { TokenManager } from './core/TokenManager';
 export { StateValidator } from './core/StateValidator';
 
+// Event system
+export * from './events';
+
 // Flow handlers
 export * from './flows';
 
