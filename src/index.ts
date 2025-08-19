@@ -15,6 +15,9 @@ export * from './events';
 // Error system
 export * from './errors';
 
+// State management
+export * from './state';
+
 // Flow handlers
 export * from './flows';
 

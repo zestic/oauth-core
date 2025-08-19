@@ -34,6 +34,7 @@ import {
   FlowError,
   ErrorFactory
 } from '../errors';
+import { LoadingManager } from '../state/LoadingManager';
 
 export class OAuthCore implements OAuthEventEmitter {
   private flowRegistry: CallbackFlowRegistry;
@@ -42,7 +43,7 @@ export class OAuthCore implements OAuthEventEmitter {
   private stateValidator: StateValidator;
   private eventEmitter: EventEmitter<OAuthEventMap>;
   private currentAuthStatus: AuthStatus = 'unauthenticated';
-  private activeOperations = new Set<string>();
+  private loadingManager: LoadingManager;
 
   constructor(
     private config: OAuthConfig,
@@ -56,6 +57,11 @@ export class OAuthCore implements OAuthEventEmitter {
     this.eventEmitter = new EventEmitter<OAuthEventMap>({
       maxListeners: 50, // Allow more listeners for complex applications
       warnOnMaxListeners: true
+    });
+    this.loadingManager = new LoadingManager(this.eventEmitter, {
+      maxConcurrentOperations: 50,
+      warnOnLongOperations: true,
+      longOperationThresholdMs: 30000 // 30 seconds
     });
 
     this.initializeFlows(flowConfig);
@@ -113,11 +119,32 @@ export class OAuthCore implements OAuthEventEmitter {
   }
 
   get isLoading(): boolean {
-    return this.activeOperations.size > 0;
+    return this.loadingManager.isLoading;
   }
 
   get activeOperationsList(): string[] {
-    return Array.from(this.activeOperations);
+    return this.loadingManager.getActiveOperations();
+  }
+
+  /**
+   * Check if a specific operation is currently active
+   */
+  isOperationActive(operation: string): boolean {
+    return this.loadingManager.isOperationActive(operation);
+  }
+
+  /**
+   * Get context for a specific active operation
+   */
+  getOperationContext(operation: string): LoadingContext | undefined {
+    return this.loadingManager.getOperationContext(operation);
+  }
+
+  /**
+   * Get loading manager statistics
+   */
+  getLoadingStatistics() {
+    return this.loadingManager.getStatistics();
   }
 
   // Private helper methods
@@ -130,21 +157,11 @@ export class OAuthCore implements OAuthEventEmitter {
   }
 
   private startOperation(operation: string, metadata?: Record<string, unknown>): LoadingContext {
-    const context: LoadingContext = {
-      operation,
-      startTime: Date.now(),
-      metadata
-    };
-
-    this.activeOperations.add(operation);
-    this.emit('loadingStart', context);
-    return context;
+    return this.loadingManager.startOperation(operation, metadata);
   }
 
   private endOperation(context: LoadingContext, success: boolean): void {
-    const duration = Date.now() - context.startTime;
-    this.activeOperations.delete(context.operation);
-    this.emit('loadingEnd', { ...context, success, duration });
+    this.loadingManager.endOperation(context, success);
   }
 
   private createAuthSuccessData(result: OAuthResult, flowName?: string, duration?: number): AuthSuccessData {
@@ -598,5 +615,14 @@ export class OAuthCore implements OAuthEventEmitter {
     // The validation will happen when handleCallback is called
 
     console.log('[OAuthCore] Initialized. Flow handlers must be registered manually.');
+  }
+
+  /**
+   * Cleanup resources when OAuthCore instance is no longer needed
+   * This will cancel all active operations and cleanup the loading manager
+   */
+  destroy(): void {
+    this.loadingManager.destroy();
+    this.eventEmitter.removeAllListeners();
   }
 }
