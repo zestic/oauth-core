@@ -499,4 +499,41 @@ describe('OAuthCore', () => {
       expect(handlers[0]?.name).toBe('magic_link_login');
     });
   });
+
+  describe('event management', () => {
+    it('should remove event listeners with off method', () => {
+      const callback = jest.fn();
+      oauthCore.on('authStatusChange', callback);
+      oauthCore.off('authStatusChange', callback);
+
+      oauthCore.emit('authStatusChange', 'authenticated');
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it('should emit events', () => {
+      const callback = jest.fn();
+      oauthCore.on('authStatusChange', callback);
+
+      oauthCore.emit('authStatusChange', 'authenticated');
+
+      expect(callback).toHaveBeenCalledWith('authenticated');
+    });
+  });
+
+  describe('error recovery', () => {
+    it('should identify recoverable errors correctly', () => {
+      // Test private method through reflection
+      const isRecoverableError = (oauthCore as any).isRecoverableError;
+
+      const networkError = new OAuthError('Network error', 'NETWORK_ERROR', 'network');
+      const tokenError = new OAuthError('Token error', 'TOKEN_ERROR', 'token');
+      const configError = new OAuthError('Config error', 'CONFIG_ERROR', 'config');
+      const regularError = new Error('Regular error');
+
+      expect(isRecoverableError(networkError)).toBe(true);
+      expect(isRecoverableError(tokenError)).toBe(true);
+      expect(isRecoverableError(configError)).toBe(false);
+      expect(isRecoverableError(regularError)).toBe(false);
+    });
+  });
 });
