@@ -127,6 +127,86 @@ describe('ConfigError', () => {
       expect(error.message).toContain('redirectUri');
       expect(error.getConfigField()).toBe('redirectUri');
     });
+
+    it('should create missingEndpoints error', () => {
+      const error = ConfigError.missingEndpoints();
+
+      expect(error.code).toBe('CONFIG_REQUIRED_FIELD_MISSING');
+      expect(error.message).toContain('endpoints');
+      expect(error.getConfigField()).toBe('endpoints');
+    });
+
+    it('should create missingAuthorizationEndpoint error', () => {
+      const error = ConfigError.missingAuthorizationEndpoint();
+
+      expect(error.code).toBe('CONFIG_REQUIRED_FIELD_MISSING');
+      expect(error.message).toContain('authorization');
+      expect(error.getConfigField()).toBe('authorization');
+    });
+
+    it('should create missingTokenEndpoint error', () => {
+      const error = ConfigError.missingTokenEndpoint();
+
+      expect(error.code).toBe('CONFIG_REQUIRED_FIELD_MISSING');
+      expect(error.message).toContain('token');
+      expect(error.getConfigField()).toBe('token');
+    });
+
+    it('should create invalidRedirectUri error', () => {
+      const error = ConfigError.invalidRedirectUri('invalid-url');
+
+      expect(error.code).toBe('CONFIG_INVALID_URL');
+      expect(error.message).toContain('invalid-url');
+      expect(error.getConfigField()).toBe('redirectUri');
+    });
+  });
+
+  describe('User-friendly messages', () => {
+    it('should return user message for missing field with field name', () => {
+      const error = new ConfigError('Missing field', 'CONFIG_REQUIRED_FIELD_MISSING', {
+        configField: 'clientId'
+      });
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Missing required configuration: clientId');
+    });
+
+    it('should return user message for missing field without field name', () => {
+      const error = new ConfigError('Missing field', 'CONFIG_REQUIRED_FIELD_MISSING');
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Missing required configuration. Please check your settings.');
+    });
+
+    it('should return user message for invalid value with field name', () => {
+      const error = new ConfigError('Invalid value', 'CONFIG_INVALID_VALUE', {
+        configField: 'timeout'
+      });
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Invalid configuration value for: timeout');
+    });
+
+    it('should return user message for invalid value without field name', () => {
+      const error = new ConfigError('Invalid value', 'CONFIG_INVALID_VALUE');
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Invalid configuration value. Please check your settings.');
+    });
+
+    it('should return user message for validation error', () => {
+      const error = new ConfigError('Validation failed', 'CONFIG_VALIDATION_FAILED');
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Configuration validation failed. Please check your settings.');
+    });
+
+    it('should return generic user message for unknown error', () => {
+      const error = new ConfigError('Unknown error', 'CONFIG_UNKNOWN_ERROR' as any);
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Configuration error. Please contact support.');
+    });
   });
 
   describe('Serialization', () => {

@@ -151,6 +151,54 @@ describe('ValidationError', () => {
     });
   });
 
+  describe('User-friendly messages', () => {
+    it('should return user message for missing parameter with parameter name', () => {
+      const error = new ValidationError('Missing parameter', 'VALIDATION_REQUIRED_PARAMETER_MISSING', {
+        parameterName: 'clientId'
+      });
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Missing required parameter: clientId');
+    });
+
+    it('should return user message for missing parameter without parameter name', () => {
+      const error = new ValidationError('Missing parameter', 'VALIDATION_REQUIRED_PARAMETER_MISSING');
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Missing required parameter. Please check your request.');
+    });
+
+    it('should return user message for invalid parameter with parameter name', () => {
+      const error = new ValidationError('Invalid parameter', 'VALIDATION_INVALID_PARAMETER', {
+        parameterName: 'grantType'
+      });
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Invalid parameter value: grantType');
+    });
+
+    it('should return user message for invalid parameter without parameter name', () => {
+      const error = new ValidationError('Invalid parameter', 'VALIDATION_INVALID_PARAMETER');
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Invalid parameter value. Please check your request.');
+    });
+
+    it('should return user message for state validation error', () => {
+      const error = new ValidationError('State mismatch', 'VALIDATION_STATE_MISMATCH');
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Security validation failed. Please try again.');
+    });
+
+    it('should return generic user message for unknown error', () => {
+      const error = new ValidationError('Unknown error', 'VALIDATION_UNKNOWN_ERROR' as any);
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Request validation failed. Please check your parameters.');
+    });
+  });
+
   describe('Serialization', () => {
     it('should serialize to JSON correctly', () => {
       const error = new ValidationError('Test message', 'VALIDATION_MISSING_PARAMETER', {

@@ -143,6 +143,54 @@ describe('FlowError', () => {
     });
   });
 
+  describe('User-friendly messages', () => {
+    it('should return user message for detection error', () => {
+      const error = new FlowError('Detection failed', 'FLOW_DETECTION_FAILED');
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Unable to determine the appropriate authentication flow');
+    });
+
+    it('should return user message for validation error with flow name', () => {
+      const error = new FlowError('Validation failed', 'FLOW_VALIDATION_FAILED', {
+        flowName: 'magic_link_login'
+      });
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Authentication flow validation failed: magic_link_login');
+    });
+
+    it('should return user message for validation error without flow name', () => {
+      const error = new FlowError('Validation failed', 'FLOW_VALIDATION_FAILED');
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Authentication flow validation failed. Please check your request.');
+    });
+
+    it('should return user message for execution error with flow name', () => {
+      const error = new FlowError('Execution failed', 'FLOW_EXECUTION_FAILED', {
+        flowName: 'magic_link_login'
+      });
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Authentication flow failed: magic_link_login');
+    });
+
+    it('should return user message for execution error without flow name', () => {
+      const error = new FlowError('Execution failed', 'FLOW_EXECUTION_FAILED');
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Authentication flow failed. Please try again.');
+    });
+
+    it('should return generic user message for unknown error', () => {
+      const error = new FlowError('Unknown error', 'FLOW_UNKNOWN_ERROR' as any);
+
+      const userMessage = error.getUserMessage();
+      expect(userMessage).toContain('Authentication flow error. Please try again.');
+    });
+  });
+
   describe('Serialization', () => {
     it('should serialize to JSON correctly', () => {
       const error = new FlowError('Test message', 'FLOW_EXECUTION_FAILED', {
