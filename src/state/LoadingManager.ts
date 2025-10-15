@@ -272,7 +272,7 @@ export class LoadingManager {
 
     if (oldestOperation) {
       console.warn(
-        `LoadingManager: Cleaning up oldest operation "${oldestOperation}" due to capacity limit (${this.options.maxConcurrentOperations})`
+        `LoadingManager: Cleaning up the oldest operation due to capacity limit (${this.options.maxConcurrentOperations})`
       );
       this.cancelOperation(oldestOperation);
     }
