@@ -35,6 +35,7 @@ import {
   ErrorFactory
 } from '../errors';
 import { LoadingManager } from '../state/LoadingManager';
+import { TokenScheduler } from '../token';
 
 export class OAuthCore implements OAuthEventEmitter {
   private flowRegistry: CallbackFlowRegistry;
@@ -44,6 +45,7 @@ export class OAuthCore implements OAuthEventEmitter {
   private eventEmitter: EventEmitter<OAuthEventMap>;
   private currentAuthStatus: AuthStatus = 'unauthenticated';
   private loadingManager: LoadingManager;
+  private tokenScheduler: TokenScheduler;
 
   constructor(
     private config: OAuthConfig,
@@ -62,6 +64,10 @@ export class OAuthCore implements OAuthEventEmitter {
       maxConcurrentOperations: 50,
       warnOnLongOperations: true,
       longOperationThresholdMs: 30000 // 30 seconds
+    });
+    this.tokenScheduler = new TokenScheduler(this.eventEmitter, {
+      minRefreshDelayMs: 1000, // 1 second minimum
+      maxRefreshDelayMs: 86400000, // 24 hours maximum
     });
 
     this.initializeFlows(flowConfig);
@@ -459,6 +465,47 @@ export class OAuthCore implements OAuthEventEmitter {
   }
 
   /**
+   * Get the expiration time of current tokens
+   * @returns Date when tokens expire, or null if expiration cannot be determined
+   */
+  async getTokenExpirationTime(): Promise<Date | null> {
+    // TODO: This needs proper implementation once we store token metadata
+    // For now, return null as we don't have access to expiresIn data
+    return null;
+  }
+
+  /**
+   * Get time until current token expires (in milliseconds)
+   * @returns milliseconds until expiration, or Number.MAX_SAFE_INTEGER if unknown
+   */
+  async getTimeUntilTokenExpiration(): Promise<number> {
+    // TODO: This needs proper implementation once we store token metadata
+    // For now, check if token exists and is expired
+    const isExpired = await this.isTokenExpired();
+    return isExpired ? -1 : Number.MAX_SAFE_INTEGER;
+  }
+
+  /**
+   * Schedule automatic token refresh
+   * @param bufferMs Buffer time before expiration to trigger refresh (default: 5 minutes)
+   * @returns Function to cancel the scheduled refresh
+   */
+  scheduleTokenRefresh(): () => void {
+    // We need current token data to schedule refresh
+    // For now, return a no-op since we don't have token metadata stored
+    console.warn('scheduleTokenRefresh: Token metadata not available for scheduling');
+    return () => {}; // Return no-op cancel function
+    // TODO: Implement once token metadata storage is available
+  }
+
+  /**
+   * Check if a token refresh is currently scheduled
+   */
+  isTokenRefreshScheduled(): boolean {
+    return this.tokenScheduler.isRefreshScheduled();
+  }
+
+  /**
    * Refresh access token using refresh token
    */
   async refreshAccessToken(): Promise<OAuthResult> {
@@ -622,6 +669,7 @@ export class OAuthCore implements OAuthEventEmitter {
    * This will cancel all active operations and cleanup the loading manager
    */
   destroy(): void {
+    this.tokenScheduler.destroy();
     this.loadingManager.destroy();
     this.eventEmitter.removeAllListeners();
   }
