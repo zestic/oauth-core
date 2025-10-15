@@ -473,8 +473,8 @@ const result = await oauthCore.handleCallback(params);
 - [x] Implement TokenScheduler for automatic refresh
 - [x] Add token utility methods to OAuthCore
 - [x] Enhance refreshTokens with auto-scheduling
-- [ ] Write token management tests
-- [ ] Document token management features
+- [x] Write token management tests
+- [x] Document token management features
 
 ### Phase 5: Authentication Status Tracking
 - [x] Create AuthStatusManager class

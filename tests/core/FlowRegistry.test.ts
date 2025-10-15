@@ -370,4 +370,74 @@ describe('CallbackFlowRegistry', () => {
       expect(sortedPriorities).toEqual(expectedPriorities);
     });
   });
+
+  describe('detectFlowWithConfidence', () => {
+    it('should detect flow with confidence when handler can handle params', () => {
+      const handler1 = new MockCallbackFlowHandler('flow1', 10);
+      const handler2 = new MockCallbackFlowHandler('flow2', 50);
+      registry.register(handler1);
+      registry.register(handler2);
+
+      const params = new URLSearchParams({ flow1: 'value' });
+      const result = registry.detectFlowWithConfidence(params, mockConfig);
+
+      expect(result).toBeDefined();
+      expect(result?.handler).toBe(handler1);
+      expect(result?.confidence).toBe(90); // 100 - 10 = 90
+      expect(result?.reason).toContain('flow1');
+    });
+
+    it('should return undefined when no handler can handle params', () => {
+      const handler = new MockCallbackFlowHandler('flow1');
+      registry.register(handler);
+
+      const params = new URLSearchParams({ other_param: 'value' });
+      const result = registry.detectFlowWithConfidence(params, mockConfig);
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should prefer higher priority (lower number) handlers', () => {
+      const handler1 = new MockCallbackFlowHandler('flow1', 10);
+      const handler2 = new MockCallbackFlowHandler('flow2', 5); // Higher priority
+      registry.register(handler1);
+      registry.register(handler2);
+
+      const params = new URLSearchParams({ flow1: 'value', flow2: 'value' });
+      const result = registry.detectFlowWithConfidence(params, mockConfig);
+
+      expect(result?.handler).toBe(handler2); // Should select the higher priority handler
+      expect(result?.confidence).toBe(95); // 100 - 5 = 95
+    });
+
+    it('should calculate confidence correctly for high priority numbers', () => {
+      const handler = new MockCallbackFlowHandler('flow1', 80);
+      registry.register(handler);
+
+      const params = new URLSearchParams({ flow1: 'value' });
+      const result = registry.detectFlowWithConfidence(params, mockConfig);
+
+      expect(result?.confidence).toBe(20); // 100 - 80 = 20
+    });
+
+    it('should handle handlers with priority 100 (zero confidence)', () => {
+      const handler = new MockCallbackFlowHandler('flow1', 100);
+      registry.register(handler);
+
+      const params = new URLSearchParams({ flow1: 'value' });
+      const result = registry.detectFlowWithConfidence(params, mockConfig);
+
+      expect(result?.confidence).toBe(0); // Math.max(0, 100 - 100) = 0
+    });
+
+    it('should handle handlers with priority greater than 100 (zero confidence)', () => {
+      const handler = new MockCallbackFlowHandler('flow1', 150);
+      registry.register(handler);
+
+      const params = new URLSearchParams({ flow1: 'value' });
+      const result = registry.detectFlowWithConfidence(params, mockConfig);
+
+      expect(result?.confidence).toBe(0); // Math.max(0, 100 - 150) = 0
+    });
+  });
 });

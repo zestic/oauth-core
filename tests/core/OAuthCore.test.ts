@@ -7,6 +7,7 @@ import { createMockAdapters, createMockConfig, MockHttpAdapter } from '../mocks/
 import { FlowError, TokenError, OAuthError } from '../../src/errors';
 import { MagicLinkLoginFlowHandler } from '../../src/flows/MagicLinkLoginFlowHandler';
 import { MagicLinkVerifyFlowHandler } from '../../src/flows/MagicLinkVerifyFlowHandler';
+import { EventEmitter } from '../../src/events/EventEmitter';
 
 describe('OAuthCore', () => {
   let oauthCore: OAuthCore;
@@ -534,6 +535,469 @@ describe('OAuthCore', () => {
       expect(isRecoverableError(tokenError)).toBe(true);
       expect(isRecoverableError(configError)).toBe(false);
       expect(isRecoverableError(regularError)).toBe(false);
+    });
+  });
+
+  describe('OAuthCore coverage improvements', () => {
+    it('should cover private initialization methods', () => {
+      // Test initializeFlows with null config
+      const coreWithNullConfig = new OAuthCore(mockConfig, mockAdapters, null as any);
+      expect(coreWithNullConfig.getRegisteredFlows()).toHaveLength(0);
+
+      // Test initializeFlows with empty config
+      const coreWithEmptyConfig = new OAuthCore(mockConfig, mockAdapters, {});
+      expect(coreWithEmptyConfig.getRegisteredFlows()).toHaveLength(0);
+    });
+
+    it('should cover private auth status methods', () => {
+      // Test setAuthStatus method through reflection
+      const setAuthStatus = (oauthCore as any).setAuthStatus;
+
+      // Test different status transitions
+      setAuthStatus.call(oauthCore, 'unauthenticated');
+      expect(oauthCore.authenticationStatus).toBe('unauthenticated');
+
+      setAuthStatus.call(oauthCore, 'authenticated');
+      expect(oauthCore.authenticationStatus).toBe('authenticated');
+
+      setAuthStatus.call(oauthCore, 'refreshing');
+      expect(oauthCore.authenticationStatus).toBe('refreshing');
+
+      setAuthStatus.call(oauthCore, 'error');
+      expect(oauthCore.authenticationStatus).toBe('error');
+    });
+
+    it('should cover private operation context methods', () => {
+      const startOperation = (oauthCore as any).startOperation;
+      const endOperation = (oauthCore as any).endOperation;
+
+      const context = startOperation.call(oauthCore, 'test_operation', { metadata: 'test' });
+      expect(context.operation).toBe('test_operation');
+      expect(context.metadata).toEqual({ metadata: 'test' });
+
+      expect(() => endOperation.call(oauthCore, context, true)).not.toThrow();
+    });
+
+    it('should cover private event creation methods', () => {
+      const createAuthSuccessData = (oauthCore as any).createAuthSuccessData;
+      const createAuthErrorData = (oauthCore as any).createAuthErrorData;
+
+      const mockResult = {
+        success: true,
+        accessToken: 'test-token',
+        refreshToken: 'test-refresh',
+        expiresIn: 3600,
+        metadata: {
+          requestId: 'test-id',
+          timestamp: new Date(),
+          duration: 100,
+          retryCount: 0
+        }
+      };
+
+      const successData = createAuthSuccessData.call(oauthCore, mockResult, 'test_flow');
+      expect(successData.success).toBe(true);
+      expect(successData.flowName).toBe('test_flow');
+      expect(successData.metadata).toEqual(mockResult.metadata);
+
+      const errorData = createAuthErrorData.call(oauthCore, new Error('Test error'), 'test_op', 1);
+      expect(errorData.error.message).toBe('Test error');
+      expect(errorData.operation).toBe('test_op');
+      expect(errorData.retryCount).toBe(1);
+    });
+
+    it('should cover error handling in token operations', async () => {
+      // Test getTokenExpirationTime with no token data
+      const result = await oauthCore.getTokenExpirationTime();
+      expect(result).toBeNull();
+
+      // Test getTimeUntilTokenExpiration with no token data
+      const timeResult = await oauthCore.getTimeUntilTokenExpiration();
+      expect(timeResult).toBe(Number.MAX_SAFE_INTEGER);
+    });
+
+    it('should cover token scheduler operations', async () => {
+      // Test scheduleTokenRefresh with no token data
+      const cancelFn = await oauthCore.scheduleTokenRefresh();
+      expect(typeof cancelFn).toBe('function');
+
+      // Test isTokenRefreshScheduled
+      const isScheduled = oauthCore.isTokenRefreshScheduled();
+      expect(typeof isScheduled).toBe('boolean');
+    });
+
+    it('should cover loading manager getters', () => {
+      expect(oauthCore.isLoading).toBe(false);
+      expect(Array.isArray(oauthCore.activeOperationsList)).toBe(true);
+    });
+
+    it('should cover operation context getter', () => {
+      const context = oauthCore.getOperationContext('nonexistent');
+      expect(context).toBeUndefined();
+    });
+
+    it('should cover loading statistics getter', () => {
+      const stats = oauthCore.getLoadingStatistics();
+      expect(stats).toBeDefined();
+      expect(typeof stats.activeCount).toBe('number');
+      expect(typeof stats.completedCount).toBe('number');
+      expect(typeof stats.averageDuration).toBe('number');
+      expect(typeof stats.successRate).toBe('number');
+    });
+
+    it('should cover event emitter methods', () => {
+      // Test listener count
+      const count = oauthCore.listenerCount('authStatusChange');
+      expect(typeof count).toBe('number');
+
+      // Test has listeners
+      const hasListeners = oauthCore.hasListeners('authStatusChange');
+      expect(typeof hasListeners).toBe('boolean');
+
+      // Test has listeners for specific event
+      const hasSpecific = oauthCore.hasListeners();
+      expect(typeof hasSpecific).toBe('boolean');
+    });
+
+    it('should cover destroy method', () => {
+      expect(() => oauthCore.destroy()).not.toThrow();
+    });
+
+    it('should cover config validation warning path', () => {
+      // Create a config that will trigger validation warnings
+      const invalidConfig = {
+        ...mockConfig,
+        clientId: '', // Empty client ID should trigger warning
+      };
+
+      // Spy on console.warn to verify it's called
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      // Create OAuthCore with invalid config - should warn but not throw
+      new OAuthCore(invalidConfig, mockAdapters);
+
+      // Verify warning was logged
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('OAuthCore: Configuration validation failed'),
+        expect.any(Array)
+      );
+
+      // Cleanup
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should cover config validation event emission', () => {
+      const invalidConfig = {
+        ...mockConfig,
+        clientId: '',
+      };
+
+      // Spy on the eventEmitter emit method to verify config validation event
+      const emitSpy = jest.spyOn(EventEmitter.prototype as any, 'emit');
+
+      new OAuthCore(invalidConfig, mockAdapters);
+
+      // The configValidation event should have been emitted during construction
+      expect(emitSpy).toHaveBeenCalledWith('configValidation', {
+        valid: false,
+        errors: expect.any(Array),
+        warnings: expect.any(Array)
+      });
+
+      emitSpy.mockRestore();
+    });
+
+    it('should cover initializeAuthStatus error handling', async () => {
+      // Mock getAccessToken to throw an error
+      mockAdapters.storage.getItem = jest.fn().mockRejectedValue(new Error('Storage error'));
+
+      // Create a new OAuthCore instance to trigger initializeAuthStatus
+      const coreWithStorageError = new OAuthCore(mockConfig, mockAdapters);
+
+      // Wait for initialization to complete
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // Should have set status to 'error'
+      expect(coreWithStorageError.authenticationStatus).toBe('error');
+    });
+
+    it('should cover console.log statements in handleCallback', async () => {
+      // Register flow handlers
+      const loginHandler = new MagicLinkLoginFlowHandler();
+      oauthCore.registerFlow(loginHandler);
+
+      // Mock token response
+      (mockAdapters.http as MockHttpAdapter).mockResponse(mockConfig.endpoints.token, {
+        status: 200,
+        data: {
+          access_token: 'test-token',
+          refresh_token: 'test-refresh',
+          expires_in: 3600,
+          token_type: 'Bearer',
+        },
+        headers: {},
+      });
+
+      // Spy on console.log
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      const params = new URLSearchParams({ token: 'test-token', flow: 'login' });
+      await oauthCore.handleCallback(params);
+
+      // Verify console.log was called for the expected messages
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[OAuthCore] Handling callback'),
+        expect.any(Object)
+      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[OAuthCore] Using flow handler: magic_link_login')
+      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[OAuthCore] Flow magic_link_login completed'),
+        expect.any(Object)
+      );
+
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should cover console.error in handleCallback catch block', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // Create a handler that throws an error
+      const errorHandler = {
+        name: 'error_handler',
+        priority: 10,
+        canHandle: () => true,
+        validate: async () => true,
+        handle: async () => {
+          throw new Error('Handler error');
+        },
+      };
+
+      oauthCore.registerFlow(errorHandler);
+
+      const params = new URLSearchParams({ test: 'value' });
+
+      try {
+        await oauthCore.handleCallback(params, 'error_handler');
+      } catch (error) {
+        // Expected to throw
+      }
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[OAuthCore] Callback handling failed'),
+        expect.any(Error)
+      );
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should cover console.log in generateAuthorizationUrl', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      await oauthCore.generateAuthorizationUrl();
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[OAuthCore] Generated authorization URL')
+      );
+
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should cover console.error in generateAuthorizationUrl catch block', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // Mock PKCE to fail
+      mockAdapters.pkce.generateCodeChallenge = jest.fn().mockRejectedValue(new Error('PKCE error'));
+
+      try {
+        await oauthCore.generateAuthorizationUrl();
+      } catch (error) {
+        // Expected to throw
+      }
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[OAuthCore] Failed to generate authorization URL'),
+        expect.any(Error)
+      );
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should cover scheduleTokenRefresh console.warn for no token data', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      // Clear any existing tokens
+      await mockAdapters.storage.removeItem('oauth_tokens');
+
+      const cancelFn = await oauthCore.scheduleTokenRefresh();
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('scheduleTokenRefresh: No token data available')
+      );
+
+      expect(typeof cancelFn).toBe('function');
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should cover scheduleTokenRefresh error handling', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      // Mock storage.getTokenData to throw
+      mockAdapters.storage.getTokenData = jest.fn().mockRejectedValue(new Error('Storage error'));
+
+      const cancelFn = await oauthCore.scheduleTokenRefresh();
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('scheduleTokenRefresh: Failed to schedule refresh'),
+        expect.any(Error)
+      );
+
+      expect(typeof cancelFn).toBe('function');
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should cover scheduleTokenRefresh success path console output', async () => {
+      // Setup - use a fresh OAuthCore instance to avoid state pollution
+      const testOAuthCore = new OAuthCore(mockConfig, mockAdapters);
+
+      // Setup token data
+      const tokenData = {
+        accessToken: 'test-token',
+        refreshToken: 'test-refresh',
+        expiresIn: 3600,
+        tokenType: 'Bearer',
+        issuedAt: new Date(Date.now() - 1000),
+      };
+      await mockAdapters.storage.setTokenData('oauth_tokens', tokenData);
+      await mockAdapters.storage.setItem('refresh_token', 'test-refresh');
+
+      // Mock HTTP response for token refresh
+      (mockAdapters.http as MockHttpAdapter).mockResponse(mockConfig.endpoints.token, {
+        status: 200,
+        data: {
+          access_token: 'new-token',
+          refresh_token: 'new-refresh',
+          expires_in: 3600,
+          token_type: 'Bearer',
+        },
+        headers: {},
+      });
+
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      // Mock the scheduler to trigger the refresh callback immediately
+      const mockScheduler = testOAuthCore['tokenScheduler'] as any;
+      const originalScheduleRefresh = mockScheduler.scheduleRefresh;
+      mockScheduler.scheduleRefresh = jest.fn().mockImplementation(
+        async (_tokens: any, _bufferMs: number, callback: () => Promise<void>) => {
+          // Immediately call the callback to test the console.log
+          await callback();
+          return () => {};
+        }
+      );
+
+      try {
+        // Execute the test
+        await testOAuthCore.scheduleTokenRefresh();
+
+        // Check that the refresh callback was executed (which logs the message)
+        expect(consoleLogSpy).toHaveBeenCalledWith(
+          expect.stringContaining('TokenScheduler: Executing scheduled refresh')
+        );
+      } finally {
+        // Cleanup - restore mocks and cleanup resources
+        consoleLogSpy.mockRestore();
+        mockScheduler.scheduleRefresh = originalScheduleRefresh;
+        testOAuthCore.destroy();
+        (mockAdapters.storage as any).clear();
+      }
+    });
+
+    it('should cover refreshAccessToken auto-schedule console.warn', async () => {
+      // Setup tokens
+      await mockAdapters.storage.setItem('refresh_token', 'test-refresh');
+
+      // Mock successful token response
+      (mockAdapters.http as MockHttpAdapter).mockResponse(mockConfig.endpoints.token, {
+        status: 200,
+        data: {
+          access_token: 'new-token',
+          refresh_token: 'new-refresh',
+          expires_in: 3600,
+          token_type: 'Bearer',
+        },
+        headers: {},
+      });
+
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      // Mock scheduleTokenRefresh to throw
+      oauthCore.scheduleTokenRefresh = jest.fn().mockRejectedValue(new Error('Schedule failed'));
+
+      await oauthCore.refreshAccessToken();
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to schedule token refresh after successful refresh'),
+        expect.any(Error)
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should cover logout console.warn for revocation failure', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      // Setup tokens first - need both access_token and refresh_token in individual storage keys
+      await mockAdapters.storage.setItem('access_token', 'test-token');
+      await mockAdapters.storage.setItem('refresh_token', 'test-refresh');
+
+      // Mock the httpAdapter.post to throw an error directly
+      const mockHttpPost = jest.spyOn(mockAdapters.http, 'post').mockRejectedValue(new Error('Revocation failed'));
+
+      await oauthCore.logout();
+
+      // The warning comes from TokenManager.revokeTokens, not OAuthCore.logout
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Token revocation failed:',
+        expect.any(Error)
+      );
+
+      consoleWarnSpy.mockRestore();
+      mockHttpPost.mockRestore();
+    });
+
+    it('should cover initializeFlows console.log', () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      // Create new OAuthCore to trigger initializeFlows
+      new OAuthCore(mockConfig, mockAdapters);
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[OAuthCore] Initialized')
+      );
+
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should cover initializeFlows flow filtering logic', () => {
+      const handler1 = new MagicLinkLoginFlowHandler();
+      const handler2 = new MagicLinkVerifyFlowHandler();
+
+      const flowConfig = {
+        customFlows: [handler1, handler2],
+        enabledFlows: ['magic_link_login'], // Only enable the first one
+      };
+
+      const coreWithFilteredFlows = new OAuthCore(mockConfig, mockAdapters, flowConfig);
+
+      const registeredFlows = coreWithFilteredFlows.getRegisteredFlows();
+
+      // Should only have the enabled flow
+      expect(registeredFlows.length).toBe(1);
+      expect(registeredFlows[0]?.name).toBe('magic_link_login');
     });
   });
 });

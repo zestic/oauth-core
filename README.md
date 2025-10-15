@@ -220,13 +220,16 @@ The library uses an adapter pattern to integrate with different environments and
 
 ### Adapter Implementation
 
-Implement adapters for your environment:
+Implement adapters for your environment. The library uses a modular adapter system where each adapter serves a specific purpose:
 
+#### Required Adapters
+
+**1. StorageAdapter** - Token storage and retrieval:
 ```typescript
-import { StorageAdapter, HttpAdapter, PKCEAdapter } from '@zestic/oauth-core';
+import { TokenStorageAdapter } from '@zestic/oauth-core';
 
-// Storage adapter example (using localStorage)
-class BrowserStorageAdapter implements StorageAdapter {
+class BrowserStorageAdapter implements TokenStorageAdapter {
+  // Basic storage operations
   async setItem(key: string, value: string): Promise<void> {
     localStorage.setItem(key, value);
   }
@@ -242,9 +245,28 @@ class BrowserStorageAdapter implements StorageAdapter {
   async removeItems(keys: string[]): Promise<void> {
     keys.forEach(key => localStorage.removeItem(key));
   }
-}
 
-// HTTP adapter example (using fetch)
+  // Token-specific operations (NEW in Phase 7)
+  async setTokenData(key: string, data: OAuthTokens): Promise<void> {
+    const jsonData = JSON.stringify(data);
+    localStorage.setItem(key, jsonData);
+  }
+
+  async getTokenData(key: string): Promise<OAuthTokens | null> {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : null;
+  }
+
+  async removeTokenData(key: string): Promise<void> {
+    localStorage.removeItem(key);
+  }
+}
+```
+
+**2. HttpAdapter** - HTTP requests with metadata support:
+```typescript
+import { HttpAdapter, HttpResponse } from '@zestic/oauth-core';
+
 class FetchHttpAdapter implements HttpAdapter {
   async post(url: string, data: Record<string, unknown>, headers?: Record<string, string>): Promise<HttpResponse> {
     const response = await fetch(url, {
@@ -256,10 +278,17 @@ class FetchHttpAdapter implements HttpAdapter {
       body: new URLSearchParams(data as Record<string, string>),
     });
 
+    // Extract rate limiting headers (NEW in Phase 7)
+    const rateLimitRemaining = response.headers.get('X-RateLimit-Remaining');
+    const rateLimitReset = response.headers.get('X-RateLimit-Reset');
+
     return {
       status: response.status,
       data: await response.json(),
       headers: Object.fromEntries(response.headers.entries()),
+      // NEW: Rate limiting metadata
+      rateLimitRemaining: rateLimitRemaining ? parseInt(rateLimitRemaining, 10) : undefined,
+      rateLimitReset: rateLimitReset ? new Date(parseInt(rateLimitReset, 10) * 1000) : undefined,
     };
   }
 
@@ -272,12 +301,90 @@ class FetchHttpAdapter implements HttpAdapter {
     };
   }
 }
+```
 
-// GraphQL adapter example (for magic links and server communication)
-class GraphQLAdapter implements GraphQLAdapter {
+**3. PKCEAdapter** - Cryptographic operations:
+```typescript
+import { PKCEAdapter, PKCEChallenge } from '@zestic/oauth-core';
+
+class CryptoPKCEAdapter implements PKCEAdapter {
+  async generateCodeChallenge(): Promise<PKCEChallenge> {
+    // Generate cryptographically secure random bytes
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+
+    // Convert to base64url
+    const codeVerifier = this.base64URLEncode(array);
+    const codeChallenge = await this.sha256(codeVerifier);
+
+    return {
+      codeChallenge,
+      codeChallengeMethod: 'S256',
+      codeVerifier
+    };
+  }
+
+  async generateState(): Promise<string> {
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    return this.base64URLEncode(array);
+  }
+
+  private async sha256(message: string): Promise<string> {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    return this.base64URLEncode(new Uint8Array(hashBuffer));
+  }
+
+  private base64URLEncode(array: Uint8Array): string {
+    const base64 = btoa(String.fromCharCode(...array));
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  }
+}
+**4. UserAdapter** - User management operations:
+```typescript
+import { UserAdapter, UserRegistrationResult, UserInfo } from '@zestic/oauth-core';
+
+class ApiUserAdapter implements UserAdapter {
+  constructor(private apiBaseUrl: string) {}
+
+  async registerUser(email: string, additionalData: Record<string, unknown>): Promise<UserRegistrationResult> {
+    const response = await fetch(`${this.apiBaseUrl}/users/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, ...additionalData })
+    });
+
+    const result = await response.json();
+    return {
+      success: response.ok,
+      userId: result.userId,
+      message: result.message
+    };
+  }
+
+  async userExists(email: string): Promise<boolean> {
+    const response = await fetch(`${this.apiBaseUrl}/users/exists?email=${encodeURIComponent(email)}`);
+    const result = await response.json();
+    return result.exists;
+  }
+
+  async getUserByEmail(email: string): Promise<UserInfo | null> {
+    const response = await fetch(`${this.apiBaseUrl}/users/by-email?email=${encodeURIComponent(email)}`);
+    if (!response.ok) return null;
+    return response.json();
+  }
+}
+```
+
+**5. GraphQLAdapter** - Server-side GraphQL mutations:
+```typescript
+import { GraphQLAdapter, GraphQLResult } from '@zestic/oauth-core';
+
+class FetchGraphQLAdapter implements GraphQLAdapter {
   constructor(private graphqlEndpoint: string) {}
 
-  async sendMagicLinkMutation(email: string, magicLinkUrl: string): Promise<GraphQLResult> {
+  async sendMagicLinkMutation(email: string, magicLinkUrl: string, options?: GraphQLOptions): Promise<GraphQLResult> {
     const mutation = `
       mutation SendMagicLink($input: SendMagicLinkInput!) {
         sendMagicLink(input: $input) {
@@ -294,7 +401,7 @@ class GraphQLAdapter implements GraphQLAdapter {
       body: JSON.stringify({
         query: mutation,
         variables: {
-          input: { email, magicLinkUrl }
+          input: { email, magicLinkUrl, ...options }
         }
       })
     });
@@ -303,42 +410,65 @@ class GraphQLAdapter implements GraphQLAdapter {
     return result.data.sendMagicLink;
   }
 
-  async sendRegistrationConfirmationMutation(email: string): Promise<GraphQLResult> {
-    // Similar GraphQL mutation for registration confirmation
-    // Your server handles the actual email sending
-    return { success: true, message: 'Confirmation triggered' };
-  }
-}
+  async sendRegistrationConfirmationMutation(email: string, options?: GraphQLOptions): Promise<GraphQLResult> {
+    const mutation = `
+      mutation SendRegistrationConfirmation($input: SendRegistrationConfirmationInput!) {
+        sendRegistrationConfirmation(input: $input) {
+          success
+          message
+          code
+        }
+      }
+    `;
 
-// User adapter example (for user management)
-class UserAdapter implements UserAdapter {
-  async registerUser(email: string, additionalData: Record<string, unknown>): Promise<UserRegistrationResult> {
-    // Call your user registration API
-    const response = await fetch('/api/users/register', {
+    const response = await fetch(this.graphqlEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, ...additionalData })
+      body: JSON.stringify({
+        query: mutation,
+        variables: {
+          input: { email, ...options }
+        }
+      })
     });
 
     const result = await response.json();
-    return {
-      success: response.ok,
-      userId: result.userId,
-      message: result.message
-    };
+    return result.data.sendRegistrationConfirmation;
   }
+}
+```
 
-  async userExists(email: string): Promise<boolean> {
-    const response = await fetch(`/api/users/exists?email=${encodeURIComponent(email)}`);
-    const result = await response.json();
-    return result.exists;
-  }
+### Putting It All Together
 
-  async getUserByEmail(email: string): Promise<UserInfo | null> {
-    const response = await fetch(`/api/users/by-email?email=${encodeURIComponent(email)}`);
-    if (!response.ok) return null;
-    return response.json();
-  }
+```typescript
+// Create all required adapters
+const storage = new BrowserStorageAdapter();
+const http = new FetchHttpAdapter();
+const pkce = new CryptoPKCEAdapter();
+const user = new ApiUserAdapter('/api');
+const graphql = new FetchGraphQLAdapter('/graphql');
+
+// Create OAuth configuration
+const config = {
+  clientId: 'your-client-id',
+  endpoints: {
+    authorization: 'https://auth.example.com/oauth/authorize',
+    token: 'https://auth.example.com/oauth/token',
+    revocation: 'https://auth.example.com/oauth/revoke',
+  },
+  redirectUri: 'https://yourapp.com/auth/callback',
+  scopes: ['read', 'write'],
+};
+
+// Initialize OAuth core
+const oauth = new OAuthCore(config, { storage, http, pkce, user, graphql });
+
+// Use with metadata tracking (NEW in Phase 7)
+const result = await oauth.handleCallback(params);
+
+if (result.metadata) {
+  console.log(`Request took ${result.metadata.duration}ms`);
+  console.log(`Rate limit remaining: ${result.metadata.rateLimitRemaining}`);
 }
 ```
 
