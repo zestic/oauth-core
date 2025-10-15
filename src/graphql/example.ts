@@ -13,12 +13,14 @@ import type {
   UserInfo
 } from '../types/ServiceTypes';
 import type {
-  StorageAdapter,
+  TokenStorageAdapter,
   HttpAdapter,
   PKCEAdapter,
   PKCEChallenge,
   HttpResponse
 } from '../types/OAuthTypes';
+
+import { OAuthTokens } from '../events/OAuthEvents';
 
 /**
  * Example implementation of UserAdapter
@@ -90,8 +92,9 @@ class ExampleGraphQLAdapter implements GraphQLAdapter {
 /**
  * Example storage adapter (in-memory)
  */
-class ExampleStorageAdapter implements StorageAdapter {
+class ExampleStorageAdapter implements TokenStorageAdapter {
   private storage: Map<string, string> = new Map();
+  private tokenStorage: Map<string, OAuthTokens> = new Map();
 
   async setItem(key: string, value: string): Promise<void> {
     this.storage.set(key, value);
@@ -107,6 +110,18 @@ class ExampleStorageAdapter implements StorageAdapter {
 
   async removeItems(keys: string[]): Promise<void> {
     keys.forEach(key => this.storage.delete(key));
+  }
+
+  async setTokenData(key: string, data: OAuthTokens): Promise<void> {
+    this.tokenStorage.set(key, data);
+  }
+
+  async getTokenData(key: string): Promise<OAuthTokens | null> {
+    return this.tokenStorage.get(key) || null;
+  }
+
+  async removeTokenData(key: string): Promise<void> {
+    this.tokenStorage.delete(key);
   }
 }
 
