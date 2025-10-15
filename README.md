@@ -63,6 +63,11 @@ The library works with any JavaScript framework through its adapter pattern:
 - **PKCE Support**: Built-in PKCE (Proof Key for Code Exchange) implementation for enhanced security
 - **Framework Agnostic**: Works with any JavaScript/TypeScript framework through adapter pattern
 - **GraphQL Ready**: Built-in support for GraphQL mutations to trigger server-side actions
+- **Event-Driven Architecture**: Reactive state management with comprehensive event system
+- **Structured Error Handling**: Rich, actionable error information with metadata and retry logic
+- **Automatic Loading States**: Built-in loading state tracking for all async operations
+- **Advanced Token Management**: Automatic token refresh scheduling and expiration handling
+- **Authentication Status Tracking**: Centralized auth status with granular reactive states
 - **Type Safe**: Full TypeScript support with comprehensive type definitions
 - **Extensible**: Plugin-based architecture for custom OAuth flows
 - **Well Tested**: Comprehensive test coverage with Jest
@@ -435,20 +440,152 @@ export async function GET(request: ExpoRequest): Promise<ExpoResponse> {
 
 ### OAuthCore
 
-Main class for handling OAuth operations.
+Main class for handling OAuth operations with event-driven architecture and reactive state management.
 
-#### Methods
+#### Event Methods
+
+- `on<TEvent extends keyof OAuthEventMap>(event: TEvent, callback: OAuthEventMap[TEvent]): () => void`
+- `once<TEvent extends keyof OAuthEventMap>(event: TEvent, callback: OAuthEventMap[TEvent]): () => void`
+- `off<TEvent extends keyof OAuthEventMap>(event: TEvent, callback: OAuthEventMap[TEvent]): void`
+- `emit<TEvent extends keyof OAuthEventMap>(event: TEvent, ...args: Parameters<OAuthEventMap[TEvent]>): boolean`
+- `removeAllListeners(event?: keyof OAuthEventMap): void`
+- `listenerCount(event: keyof OAuthEventMap): number`
+- `hasListeners(event?: keyof OAuthEventMap): boolean`
+
+#### Core Methods
 
 - `handleCallback(params: URLSearchParams | string, explicitFlow?: string): Promise<OAuthResult>`
 - `generatePKCEChallenge(): Promise<PKCEChallenge>`
 - `generateState(): Promise<string>`
+- `generateAuthorizationUrl(additionalParams?: Record<string, string>): Promise<{ url: string; state: string }>`
+
+#### Token Management
+
 - `getAccessToken(): Promise<string | null>`
 - `getRefreshToken(): Promise<string | null>`
 - `isTokenExpired(): Promise<boolean>`
 - `refreshAccessToken(): Promise<OAuthResult>`
-- `logout(): Promise<void>`
+- `getTokenExpirationTime(): Promise<Date | null>`
+- `getTimeUntilTokenExpiration(): Promise<number>`
+- `scheduleTokenRefresh(bufferMs?: number): () => void`
+- `isTokenRefreshScheduled(): boolean`
+
+#### Authentication State
+
+- `get authenticationStatus(): AuthStatus`
+- `get isAuthenticated(): boolean`
+- `get isLoading(): boolean`
+- `get activeOperationsList(): string[]`
+- `isOperationActive(operation: string): boolean`
+- `getOperationContext(operation: string): LoadingContext | undefined`
+- `getLoadingStatistics(): LoadingStatistics`
+
+#### Flow Management
+
 - `registerFlow(handler: FlowHandler): void`
 - `unregisterFlow(name: string): void`
+- `getRegisteredFlows(): CallbackFlowHandler[]`
+- `getCompatibleHandlers(params: URLSearchParams | string): CallbackFlowHandler[]`
+
+#### Cleanup
+
+- `logout(reason?: 'user' | 'expired' | 'error' | 'revoked'): Promise<void>`
+- `destroy(): void`
+
+### Event System
+
+The library provides comprehensive event-driven architecture:
+
+#### Authentication Events
+- `authStatusChange`: Emitted when authentication status changes
+- `authSuccess`: Emitted when authentication succeeds
+- `authError`: Emitted when authentication fails
+
+#### Token Events
+- `tokenRefresh`: Emitted when tokens are refreshed
+- `tokenExpired`: Emitted when tokens expire
+- `tokenRefreshScheduled`: Emitted when token refresh is scheduled
+
+#### Loading Events
+- `loadingStart`: Emitted when async operations begin
+- `loadingEnd`: Emitted when async operations complete
+
+#### Flow Events
+- `callbackStart`: Emitted when callback handling starts
+- `callbackComplete`: Emitted when callback handling completes
+- `flowDetected`: Emitted when OAuth flow is detected
+
+#### Other Events
+- `pkceGenerated`: Emitted when PKCE challenge is generated
+- `stateGenerated`: Emitted when state parameter is generated
+- `authUrlGenerated`: Emitted when authorization URL is generated
+- `tokensStored`: Emitted when tokens are stored
+- `tokensCleared`: Emitted when tokens are cleared
+- `logout`: Emitted when user logs out
+
+### Error Handling
+
+Structured error system with rich metadata:
+
+```typescript
+try {
+  const result = await oauth.handleCallback(params);
+} catch (error) {
+  if (error.code === 'TOKEN_ERROR') {
+    // Handle token errors
+    if (error.canRetry()) {
+      // Retry after error.retryDelay
+    }
+  }
+}
+```
+
+### Reactive State Management
+
+Subscribe to authentication state changes:
+
+```typescript
+const unsubscribe = oauth.on('authStatusChange', (status, previousStatus) => {
+  console.log(`Auth status changed from ${previousStatus} to ${status}`);
+
+  switch (status) {
+    case 'authenticated':
+      // User is now logged in
+      break;
+    case 'expired':
+      // Tokens expired, trigger refresh
+      break;
+    case 'error':
+      // Handle auth errors
+      break;
+  }
+});
+
+// Clean up when done
+unsubscribe();
+```
+
+### Loading State Tracking
+
+Monitor async operations:
+
+```typescript
+oauth.on('loadingStart', (context) => {
+  console.log(`Operation started: ${context.operation}`);
+  showSpinner();
+});
+
+oauth.on('loadingEnd', (context, success, duration) => {
+  console.log(`Operation completed: ${context.operation} (${duration}ms)`);
+  hideSpinner();
+});
+
+// Check current loading state
+if (oauth.isLoading) {
+  const activeOps = oauth.activeOperationsList;
+  console.log('Active operations:', activeOps);
+}
+```
 
 ### Flow Handlers
 
