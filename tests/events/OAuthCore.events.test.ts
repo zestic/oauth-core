@@ -243,7 +243,9 @@ describe('OAuthCore Event Integration', () => {
           success: true,
           accessToken: 'access-123',
           flowName: 'magic_link_login',
-          duration: expect.any(Number)
+          metadata: expect.objectContaining({
+            duration: expect.any(Number)
+          })
         })
       );
 

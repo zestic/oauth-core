@@ -165,12 +165,13 @@ describe('GraphQL + OAuth Integration', () => {
       // Handle the OAuth callback
       const oauthResult = await magicLinkHandler.handle(callbackParams, adapters, oauthConfig);
 
-      expect(oauthResult).toEqual({
-        success: true,
-        accessToken: 'access-token-123',
-        refreshToken: 'refresh-token-456',
-        expiresIn: 3600
-      });
+      expect(oauthResult.success).toBe(true);
+      expect(oauthResult.accessToken).toBe('access-token-123');
+      expect(oauthResult.refreshToken).toBe('refresh-token-456');
+      expect(oauthResult.expiresIn).toBe(3600);
+      expect(oauthResult.metadata).toBeDefined();
+      expect(oauthResult.metadata?.requestId).toBeDefined();
+      expect(oauthResult.metadata?.duration).toBeDefined();
 
       // Verify tokens were stored
       expect(await adapters.storage.getItem('access_token')).toBe('access-token-123');

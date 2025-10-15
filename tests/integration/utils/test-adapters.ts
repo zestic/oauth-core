@@ -27,6 +27,15 @@ export const createE2EAdapters = (): ExtendedOAuthAdapters => {
       }),
       removeItems: jest.fn().mockImplementation(async (keys: string[]) => {
         keys.forEach(key => storage.delete(key));
+      }),
+      setTokenData: jest.fn().mockImplementation(async (key: string, data: any) => {
+        tokenStorage.set(key, data);
+      }),
+      getTokenData: jest.fn().mockImplementation(async (key: string) => {
+        return tokenStorage.get(key) || null;
+      }),
+      removeTokenData: jest.fn().mockImplementation(async (key: string) => {
+        tokenStorage.delete(key);
       })
     } as any, // Cast to any to avoid type conflicts in tests
     http: {

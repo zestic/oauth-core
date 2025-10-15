@@ -66,12 +66,13 @@ describe('OAuth Refresh Token Grant Flow End-to-End', () => {
       // Step 4: Simulate automatic refresh (what middleware would do)
       const refreshResult = await oauthCore.refreshAccessToken();
 
-      expect(refreshResult).toEqual({
-        success: true,
-        accessToken: 'auto-refreshed-access-token',
-        refreshToken: 'new-auto-refresh-token',
-        expiresIn: 3600
-      });
+      expect(refreshResult.success).toBe(true);
+      expect(refreshResult.accessToken).toBe('auto-refreshed-access-token');
+      expect(refreshResult.refreshToken).toBe('new-auto-refresh-token');
+      expect(refreshResult.expiresIn).toBe(3600);
+      expect(refreshResult.metadata).toBeDefined();
+      expect(refreshResult.metadata?.requestId).toBeDefined();
+      expect(refreshResult.metadata?.duration).toBeDefined();
 
       // Step 5: Verify the new token is now available for API operations
       const newToken = await oauthCore.getAccessToken();

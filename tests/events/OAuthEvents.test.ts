@@ -116,18 +116,20 @@ describe('OAuth Events', () => {
         refreshToken: 'refresh-456',
         expiresIn: 3600,
         flowName: 'authorization_code',
-        duration: 1500,
         metadata: {
+          requestId: 'test-request-123',
           timestamp: new Date(),
-          hasRefreshToken: true
+          duration: 1500,
+          retryCount: 0
         }
       };
 
       expect(authSuccess.success).toBe(true);
       expect(authSuccess.accessToken).toBe('token-123');
       expect(authSuccess.flowName).toBe('authorization_code');
-      expect(authSuccess.duration).toBe(1500);
-      expect(authSuccess.metadata?.hasRefreshToken).toBe(true);
+      expect(authSuccess.metadata?.requestId).toBe('test-request-123');
+      expect(authSuccess.metadata?.duration).toBe(1500);
+      expect(authSuccess.metadata?.retryCount).toBe(0);
     });
   });
 
@@ -293,11 +295,19 @@ describe('OAuth Events', () => {
         success: true,
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
-        expiresIn: tokens.expiresIn
+        expiresIn: tokens.expiresIn,
+        metadata: {
+          requestId: 'test-request-456',
+          timestamp: new Date(),
+          duration: 100,
+          retryCount: 0
+        }
       };
 
       expect(authSuccess.accessToken).toBe(tokens.accessToken);
       expect(authSuccess.refreshToken).toBe(tokens.refreshToken);
+      expect(authSuccess.metadata?.requestId).toBe('test-request-456');
+      expect(authSuccess.metadata?.duration).toBe(100);
     });
 
     it('should ensure LoadingContext works with operation tracking', () => {
