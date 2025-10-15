@@ -35,7 +35,7 @@ import {
   ErrorFactory
 } from '../errors';
 import { LoadingManager, AuthStatusManager } from '../state';
-import { TokenScheduler } from '../token';
+import { TokenScheduler, TokenUtils } from '../token';
 
 export class OAuthCore implements OAuthEventEmitter {
   private flowRegistry: CallbackFlowRegistry;
@@ -318,8 +318,12 @@ export class OAuthCore implements OAuthEventEmitter {
             accessToken: result.accessToken,
             refreshToken: result.refreshToken,
             expiresIn: result.expiresIn,
-            tokenType: 'Bearer'
+            tokenType: 'Bearer',
+            issuedAt: new Date()
           };
+
+          // Store complete token metadata
+          await this.adapters.storage.setTokenData('oauth_tokens', tokens);
           this.emit('tokensStored', tokens);
         }
       } else {
@@ -469,9 +473,17 @@ export class OAuthCore implements OAuthEventEmitter {
    * @returns Date when tokens expire, or null if expiration cannot be determined
    */
   async getTokenExpirationTime(): Promise<Date | null> {
-    // TODO: This needs proper implementation once we store token metadata
-    // For now, return null as we don't have access to expiresIn data
-    return null;
+    try {
+      const tokenData = await this.adapters.storage.getTokenData('oauth_tokens');
+      if (!tokenData) {
+        return null;
+      }
+
+      return TokenUtils.getExpirationTime(tokenData);
+    } catch (error) {
+      console.warn('Failed to get token expiration time:', error);
+      return null;
+    }
   }
 
   /**
@@ -479,10 +491,17 @@ export class OAuthCore implements OAuthEventEmitter {
    * @returns milliseconds until expiration, or Number.MAX_SAFE_INTEGER if unknown
    */
   async getTimeUntilTokenExpiration(): Promise<number> {
-    // TODO: This needs proper implementation once we store token metadata
-    // For now, check if token exists and is expired
-    const isExpired = await this.isTokenExpired();
-    return isExpired ? -1 : Number.MAX_SAFE_INTEGER;
+    try {
+      const tokenData = await this.adapters.storage.getTokenData('oauth_tokens');
+      if (!tokenData) {
+        return Number.MAX_SAFE_INTEGER;
+      }
+
+      return TokenUtils.getTimeUntilExpiration(tokenData);
+    } catch (error) {
+      console.warn('Failed to get time until token expiration:', error);
+      return Number.MAX_SAFE_INTEGER;
+    }
   }
 
   /**
@@ -490,12 +509,31 @@ export class OAuthCore implements OAuthEventEmitter {
    * @param bufferMs Buffer time before expiration to trigger refresh (default: 5 minutes)
    * @returns Function to cancel the scheduled refresh
    */
-  scheduleTokenRefresh(): () => void {
-    // We need current token data to schedule refresh
-    // For now, return a no-op since we don't have token metadata stored
-    console.warn('scheduleTokenRefresh: Token metadata not available for scheduling');
-    return () => {}; // Return no-op cancel function
-    // TODO: Implement once token metadata storage is available
+  async scheduleTokenRefresh(bufferMs: number = 300000): Promise<() => void> {
+    try {
+      const tokenData = await this.adapters.storage.getTokenData('oauth_tokens');
+      if (!tokenData) {
+        console.warn('scheduleTokenRefresh: No token data available for scheduling');
+        return () => {};
+      }
+
+      return this.tokenScheduler.scheduleRefresh(
+        tokenData,
+        bufferMs,
+        async () => {
+          console.log('TokenScheduler: Executing scheduled refresh');
+          try {
+            await this.refreshAccessToken();
+          } catch (error) {
+            console.error('Scheduled token refresh failed:', error);
+            throw error;
+          }
+        }
+      );
+    } catch (error) {
+      console.warn('scheduleTokenRefresh: Failed to schedule refresh:', error);
+      return () => {};
+    }
   }
 
   /**
@@ -530,10 +568,19 @@ export class OAuthCore implements OAuthEventEmitter {
             accessToken: result.accessToken,
             refreshToken: result.refreshToken,
             expiresIn: result.expiresIn,
-            tokenType: 'Bearer'
+            tokenType: 'Bearer',
+            issuedAt: new Date()
           };
+
+          // Store updated token metadata
+          await this.adapters.storage.setTokenData('oauth_tokens', tokens);
           this.emit('tokenRefresh', tokens);
           this.emit('tokensStored', tokens);
+
+          // Auto-schedule next refresh
+          this.scheduleTokenRefresh().catch(error => {
+            console.warn('Failed to schedule token refresh after successful refresh:', error);
+          });
         }
 
         const authSuccessData = this.createAuthSuccessData(result, 'token_refresh');
@@ -574,6 +621,7 @@ export class OAuthCore implements OAuthEventEmitter {
       await this.tokenManager.revokeTokens(this.config);
       await this.pkceManager.clearPKCEData();
       await this.stateValidator.clearState();
+      await this.adapters.storage.removeTokenData('oauth_tokens');
 
       this.setAuthStatus('unauthenticated');
 

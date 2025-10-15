@@ -11,6 +11,9 @@ const mockStorage = {
   getItem: jest.fn(),
   removeItem: jest.fn(),
   removeItems: jest.fn(),
+  setTokenData: jest.fn(),
+  getTokenData: jest.fn(),
+  removeTokenData: jest.fn(),
 };
 
 const mockHttp = {
@@ -80,19 +83,19 @@ describe('OAuthCore Token Utility Methods', () => {
   });
 
   describe('scheduleTokenRefresh', () => {
-    it('should return a function (placeholder implementation)', () => {
-      const cancelFn = oauthCore.scheduleTokenRefresh();
+    it('should return a function (placeholder implementation)', async () => {
+      const cancelFn = await oauthCore.scheduleTokenRefresh();
       expect(typeof cancelFn).toBe('function');
       expect(() => cancelFn()).not.toThrow();
     });
 
-    it('should log warning about unavailable metadata', () => {
+    it('should log warning when no token data available', async () => {
       const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-      oauthCore.scheduleTokenRefresh();
+      await oauthCore.scheduleTokenRefresh();
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Token metadata not available')
+        expect.stringContaining('No token data available')
       );
 
       consoleSpy.mockRestore();

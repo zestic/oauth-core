@@ -20,7 +20,7 @@ export interface OAuthConfig {
 }
 
 export interface OAuthAdapters {
-  storage: StorageAdapter;
+  storage: TokenStorageAdapter;
   http: HttpAdapter;
   pkce: PKCEAdapter;
 }
@@ -39,6 +39,16 @@ export interface StorageAdapter {
   getItem(key: string): Promise<string | null>;
   removeItem(key: string): Promise<void>;
   removeItems(keys: string[]): Promise<void>;
+}
+
+// Import OAuthTokens for the extended interface
+import type { OAuthTokens } from '../events/OAuthEvents';
+
+// Extended storage interface for token metadata
+export interface TokenStorageAdapter extends StorageAdapter {
+  setTokenData(key: string, data: OAuthTokens): Promise<void>;
+  getTokenData(key: string): Promise<OAuthTokens | null>;
+  removeTokenData(key: string): Promise<void>;
 }
 
 export interface HttpAdapter {

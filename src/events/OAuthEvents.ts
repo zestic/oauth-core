@@ -24,6 +24,7 @@ export interface OAuthTokens {
   expiresIn?: number;
   tokenType?: string;
   scope?: string;
+  issuedAt?: Date;
 }
 
 /**
