@@ -469,8 +469,8 @@ const result = await oauthCore.handleCallback(params);
 - [x] Document loading state API
 
 ### Phase 4: Advanced Token Management
-- [ ] Create TokenUtils class with expiration methods
-- [ ] Implement TokenScheduler for automatic refresh
+- [x] Create TokenUtils class with expiration methods
+- [x] Implement TokenScheduler for automatic refresh
 - [ ] Add token utility methods to OAuthCore
 - [ ] Enhance refreshTokens with auto-scheduling
 - [ ] Write token management tests

@@ -3,3 +3,4 @@
  */
 
 export { TokenUtils } from './TokenUtils';
+export { TokenScheduler } from './TokenScheduler';
