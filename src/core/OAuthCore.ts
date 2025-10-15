@@ -36,6 +36,7 @@ import {
 } from '../errors';
 import { LoadingManager, AuthStatusManager } from '../state';
 import { TokenScheduler, TokenUtils } from '../token';
+import { ConfigValidator } from '../validation';
 
 export class OAuthCore implements OAuthEventEmitter {
   private flowRegistry: CallbackFlowRegistry;
@@ -69,6 +70,19 @@ export class OAuthCore implements OAuthEventEmitter {
       minRefreshDelayMs: 1000, // 1 second minimum
       maxRefreshDelayMs: 86400000, // 24 hours maximum
     });
+    // Validate configuration early
+    const validationResult = ConfigValidator.validate(config);
+    if (!validationResult.valid) {
+      console.warn('OAuthCore: Configuration validation failed:', validationResult.errors);
+      // In pre-release mode, we continue but log warnings
+      // Emit config validation event for any listeners
+      this.eventEmitter?.emit('configValidation', {
+        valid: false,
+        errors: validationResult.errors.map(e => e.message),
+        warnings: validationResult.warnings.map(w => w.message)
+      });
+    }
+
     this.authStatusManager = new AuthStatusManager(this.eventEmitter, {
       emitEvents: true,
       initialStatus: 'unauthenticated'

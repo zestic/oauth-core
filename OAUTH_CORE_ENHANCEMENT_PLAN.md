@@ -471,27 +471,27 @@ const result = await oauthCore.handleCallback(params);
 ### Phase 4: Advanced Token Management
 - [x] Create TokenUtils class with expiration methods
 - [x] Implement TokenScheduler for automatic refresh
-- [ ] Add token utility methods to OAuthCore
-- [ ] Enhance refreshTokens with auto-scheduling
+- [x] Add token utility methods to OAuthCore
+- [x] Enhance refreshTokens with auto-scheduling
 - [ ] Write token management tests
 - [ ] Document token management features
 
 ### Phase 5: Authentication Status Tracking
-- [ ] Create AuthStatusManager class
-- [ ] Define AuthStatus type with all states
-- [ ] Integrate status manager into OAuthCore
-- [ ] Add authenticationStatus and isAuthenticated properties
-- [ ] Emit authStatusChange events
-- [ ] Write auth status tests
-- [ ] Document authentication status API
+- [x] Create AuthStatusManager class
+- [x] Define AuthStatus type with all states
+- [x] Integrate status manager into OAuthCore
+- [x] Add authenticationStatus and isAuthenticated properties
+- [x] Emit authStatusChange events
+- [x] Write auth status tests
+- [x] Document authentication status API
 
 ### Phase 6: Configuration Validation
-- [ ] Create ConfigValidator class
-- [ ] Implement validation methods for all config parts
-- [ ] Add validateConfig method to OAuthCore
-- [ ] Emit configError events for validation failures
-- [ ] Write config validation tests
-- [ ] Document configuration validation
+- [x] Create ConfigValidator class
+- [x] Implement validation methods for all config parts
+- [x] Add validateConfig method to OAuthCore
+- [x] Emit configError events for validation failures
+- [x] Write config validation tests
+- [x] Document configuration validation
 
 ### Phase 7: Request/Response Metadata
 - [ ] Create RequestMetadata types
