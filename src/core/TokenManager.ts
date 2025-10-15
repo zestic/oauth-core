@@ -87,9 +87,12 @@ export class TokenManager {
     request: TokenExchangeRequest,
     config: OAuthConfig
   ): Promise<OAuthResult> {
+    const startTime = Date.now();
+    const retryCount = 0; // Initialize retry count
+
     try {
       const requestBody = this.buildTokenRequestBody(request);
-      
+
       const response = await this.httpAdapter.post(
         config.endpoints.token,
         requestBody,
@@ -110,15 +113,24 @@ export class TokenManager {
       }
 
       const tokenResponse = response.data as TokenResponse;
-      
+
       // Store tokens
       await this.storeTokens(tokenResponse);
 
+      const endTime = Date.now();
       return {
         success: true,
         accessToken: tokenResponse.access_token,
         refreshToken: tokenResponse.refresh_token,
         expiresIn: tokenResponse.expires_in,
+        metadata: {
+          requestId: `token-exchange-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          timestamp: new Date(startTime),
+          duration: endTime - startTime,
+          retryCount,
+          rateLimitRemaining: response.rateLimitRemaining,
+          rateLimitReset: response.rateLimitReset
+        }
       };
 
     } catch (error) {

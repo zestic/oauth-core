@@ -68,6 +68,7 @@ The library works with any JavaScript framework through its adapter pattern:
 - **Automatic Loading States**: Built-in loading state tracking for all async operations
 - **Advanced Token Management**: Automatic token refresh scheduling and expiration handling
 - **Authentication Status Tracking**: Centralized auth status with granular reactive states
+- **Request/Response Metadata**: Comprehensive request tracking with timing, rate limiting, and retry information
 - **Type Safe**: Full TypeScript support with comprehensive type definitions
 - **Extensible**: Plugin-based architecture for custom OAuth flows
 - **Well Tested**: Comprehensive test coverage with Jest
@@ -586,6 +587,42 @@ if (oauth.isLoading) {
   console.log('Active operations:', activeOps);
 }
 ```
+
+### Request/Response Metadata
+
+Track detailed information about OAuth operations:
+
+```typescript
+const result = await oauth.handleCallback(params);
+
+if (result.metadata) {
+  console.log('Request details:', {
+    requestId: result.metadata.requestId,
+    timestamp: result.metadata.timestamp,
+    duration: result.metadata.duration,
+    retryCount: result.metadata.retryCount,
+    rateLimitRemaining: result.metadata.rateLimitRemaining,
+    rateLimitReset: result.metadata.rateLimitReset
+  });
+}
+
+// Monitor all operations with metadata
+oauth.on('authSuccess', (data) => {
+  if (data.metadata) {
+    console.log(`Authentication completed in ${data.metadata.duration}ms`);
+    console.log(`Rate limit remaining: ${data.metadata.rateLimitRemaining}`);
+  }
+});
+```
+
+#### Metadata Fields
+
+- **`requestId`**: Unique identifier for the request (useful for tracing)
+- **`timestamp`**: When the request was initiated
+- **`duration`**: Total time taken for the operation in milliseconds
+- **`retryCount`**: Number of retry attempts made (for future retry logic)
+- **`rateLimitRemaining`**: Remaining requests allowed in current rate limit window
+- **`rateLimitReset`**: When the rate limit window resets (Date object)
 
 ### Flow Handlers
 

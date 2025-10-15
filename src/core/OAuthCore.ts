@@ -184,16 +184,23 @@ export class OAuthCore implements OAuthEventEmitter {
     this.loadingManager.endOperation(context, success);
   }
 
-  private createAuthSuccessData(result: OAuthResult, flowName?: string, duration?: number): AuthSuccessData {
+  private createAuthSuccessData(result: OAuthResult, flowName?: string): AuthSuccessData {
     return {
-      ...result,
-      flowName,
-      duration,
-      metadata: {
-        timestamp: new Date(),
-        hasRefreshToken: !!result.refreshToken,
-        expiresIn: result.expiresIn
-      }
+      success: result.success,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      expiresIn: result.expiresIn,
+      error: result.error,
+      errorCode: result.errorCode,
+      metadata: result.metadata ? {
+        requestId: result.metadata.requestId,
+        timestamp: result.metadata.timestamp,
+        duration: result.metadata.duration,
+        retryCount: result.metadata.retryCount,
+        rateLimitRemaining: result.metadata.rateLimitRemaining,
+        rateLimitReset: result.metadata.rateLimitReset
+      } : undefined,
+      flowName
     };
   }
 
@@ -258,6 +265,8 @@ export class OAuthCore implements OAuthEventEmitter {
   async handleCallback(params: URLSearchParams | string, explicitFlow?: string): Promise<OAuthResult> {
     const loadingContext = this.startOperation(OAUTH_OPERATIONS.HANDLE_CALLBACK);
     this.setAuthStatus('authenticating');
+    const startTime = Date.now();
+    const retryCount = 0; // Initialize retry count (will be used for future retry logic)
 
     try {
       // Parse parameters if string provided
@@ -321,8 +330,8 @@ export class OAuthCore implements OAuthEventEmitter {
       // Update auth status and emit events based on result
       if (result.success) {
         this.setAuthStatus('authenticated');
-        const duration = Date.now() - loadingContext.startTime;
-        const authSuccessData = this.createAuthSuccessData(result, handler.name, duration);
+        const duration = Date.now() - startTime;
+        const authSuccessData = this.createAuthSuccessData(result, handler.name);
         this.emit('authSuccess', authSuccessData);
         this.emit('callbackComplete', result, handler.name, duration);
 
@@ -348,6 +357,15 @@ export class OAuthCore implements OAuthEventEmitter {
         );
         this.emit('authError', authErrorData);
       }
+
+      // Add metadata to result before returning
+      const endTime = Date.now();
+      result.metadata = {
+        requestId: `oauth-callback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date(startTime),
+        duration: endTime - startTime,
+        retryCount
+      };
 
       this.endOperation(loadingContext, result.success);
       return result;
@@ -563,6 +581,8 @@ export class OAuthCore implements OAuthEventEmitter {
   async refreshAccessToken(): Promise<OAuthResult> {
     const loadingContext = this.startOperation(OAUTH_OPERATIONS.REFRESH_TOKEN);
     this.setAuthStatus('refreshing');
+    const startTime = Date.now();
+    const retryCount = 0; // Initialize retry count (will be used for future retry logic)
 
     try {
       const refreshToken = await this.tokenManager.getRefreshToken();
@@ -607,6 +627,15 @@ export class OAuthCore implements OAuthEventEmitter {
         );
         this.emit('authError', authErrorData);
       }
+
+      // Add metadata to result before returning
+      const endTime = Date.now();
+      result.metadata = {
+        requestId: `oauth-refresh-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date(startTime),
+        duration: endTime - startTime,
+        retryCount
+      };
 
       this.endOperation(loadingContext, result.success);
       return result;

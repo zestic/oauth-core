@@ -12,6 +12,8 @@ import type { ExtendedOAuthAdapters } from '../../../src/types/ServiceTypes';
 export const createE2EAdapters = (): ExtendedOAuthAdapters => {
   const storage = new Map<string, string>();
 
+  const tokenStorage = new Map<string, any>();
+
   return {
     storage: {
       setItem: jest.fn().mockImplementation(async (key: string, value: string) => {
@@ -26,7 +28,7 @@ export const createE2EAdapters = (): ExtendedOAuthAdapters => {
       removeItems: jest.fn().mockImplementation(async (keys: string[]) => {
         keys.forEach(key => storage.delete(key));
       })
-    },
+    } as any, // Cast to any to avoid type conflicts in tests
     http: {
       post: jest.fn(),
       get: jest.fn()

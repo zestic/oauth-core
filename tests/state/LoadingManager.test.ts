@@ -282,7 +282,7 @@ describe('LoadingManager', () => {
       limitedManager.startOperation('op3'); // Should trigger cleanup
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Cleaning up oldest operation "op1" due to capacity limit (2)')
+        expect.stringContaining('Cleaning up the oldest operation due to capacity limit (2)')
       );
       expect(limitedManager.getActiveOperations()).toEqual(['op2', 'op3']);
 

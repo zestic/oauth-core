@@ -109,8 +109,8 @@ describe('OAuthCore Token Utility Methods', () => {
     });
   });
 
-  describe('backward compatibility', () => {
-    it('should maintain existing token methods', async () => {
+  describe('existing token methods', () => {
+    it('should provide access to core token functionality', async () => {
       mockStorage.getItem.mockResolvedValue('test-token');
 
       const accessToken = await oauthCore.getAccessToken();

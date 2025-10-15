@@ -48,10 +48,22 @@ export interface TokenExpirationData {
 /**
  * Auth success event data
  */
-export interface AuthSuccessData extends OAuthResult {
+export interface AuthSuccessData {
+  success: boolean;
+  accessToken?: string;
+  refreshToken?: string;
+  expiresIn?: number;
+  error?: string;
+  errorCode?: string;
+  metadata?: {
+    requestId?: string;
+    timestamp: Date;
+    duration: number;
+    retryCount?: number;
+    rateLimitRemaining?: number;
+    rateLimitReset?: Date;
+  };
   flowName?: string;
-  duration?: number;
-  metadata?: Record<string, unknown>;
 }
 
 /**

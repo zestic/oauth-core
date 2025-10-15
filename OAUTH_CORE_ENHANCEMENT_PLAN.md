@@ -494,12 +494,12 @@ const result = await oauthCore.handleCallback(params);
 - [x] Document configuration validation
 
 ### Phase 7: Request/Response Metadata
-- [ ] Create RequestMetadata types
-- [ ] Add metadata to OAuthResult interface
-- [ ] Track request timing and retry counts
-- [ ] Add rate limiting information
-- [ ] Write metadata tests
-- [ ] Document metadata features
+- [x] Create RequestMetadata types
+- [x] Add metadata to OAuthResult interface
+- [x] Track request timing and retry counts
+- [x] Add rate limiting information
+- [x] Write metadata tests
+- [x] Document metadata features
 
 ### Testing & Quality Assurance
 - [ ] Achieve 90%+ test coverage

@@ -2,17 +2,20 @@
  * Mock adapters for testing
  */
 
-import { 
-  StorageAdapter, 
-  HttpAdapter, 
-  PKCEAdapter, 
-  HttpResponse, 
+import {
+  HttpAdapter,
+  PKCEAdapter,
+  HttpResponse,
   PKCEChallenge,
-  OAuthAdapters 
+  OAuthAdapters,
+  TokenStorageAdapter
 } from '../../src/types/OAuthTypes';
 
-export class MockStorageAdapter implements StorageAdapter {
+import { OAuthTokens } from '../../src/events/OAuthEvents';
+
+export class MockStorageAdapter implements TokenStorageAdapter {
   private storage = new Map<string, string>();
+  private tokenStorage = new Map<string, OAuthTokens>();
 
   async setItem(key: string, value: string): Promise<void> {
     this.storage.set(key, value);
@@ -32,17 +35,38 @@ export class MockStorageAdapter implements StorageAdapter {
     }
   }
 
+  async setTokenData(key: string, data: OAuthTokens): Promise<void> {
+    this.tokenStorage.set(key, data);
+  }
+
+  async getTokenData(key: string): Promise<OAuthTokens | null> {
+    return this.tokenStorage.get(key) ?? null;
+  }
+
+  async removeTokenData(key: string): Promise<void> {
+    this.tokenStorage.delete(key);
+  }
+
   // Test utilities
   clear(): void {
     this.storage.clear();
+    this.tokenStorage.clear();
   }
 
   getAll(): Record<string, string> {
     return Object.fromEntries(this.storage.entries());
   }
 
+  getAllTokens(): Record<string, OAuthTokens> {
+    return Object.fromEntries(this.tokenStorage.entries());
+  }
+
   size(): number {
     return this.storage.size;
+  }
+
+  tokenSize(): number {
+    return this.tokenStorage.size;
   }
 }
 

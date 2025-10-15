@@ -32,6 +32,14 @@ export interface OAuthResult {
   expiresIn?: number;
   error?: string;
   errorCode?: string;
+  metadata?: {
+    requestId?: string;
+    timestamp: Date;
+    duration: number;
+    retryCount?: number;
+    rateLimitRemaining?: number;
+    rateLimitReset?: Date;
+  };
 }
 
 export interface StorageAdapter {
@@ -60,6 +68,8 @@ export interface HttpResponse {
   status: number;
   data: unknown;
   headers: Record<string, string>;
+  rateLimitRemaining?: number;
+  rateLimitReset?: Date;
 }
 
 export interface PKCEAdapter {

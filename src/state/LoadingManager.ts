@@ -282,10 +282,12 @@ export class LoadingManager {
    * Start periodic cleanup of completed operations
    */
   private startCleanupTimer(): void {
-    // Clean up every 5 minutes
-    setInterval(() => {
-      this.cleanupCompletedOperations();
-    }, 300000);
+    // Clean up every 5 minutes - only in production environment
+    if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'test') {
+      setInterval(() => {
+        this.cleanupCompletedOperations();
+      }, 300000);
+    }
   }
 
   /**

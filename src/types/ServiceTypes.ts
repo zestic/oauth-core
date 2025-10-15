@@ -146,7 +146,7 @@ export interface MagicLinkToken {
  * Extended OAuth adapters that include new service adapters
  */
 export interface ExtendedOAuthAdapters {
-  storage: import('./OAuthTypes').StorageAdapter;
+  storage: import('./OAuthTypes').TokenStorageAdapter;
   http: import('./OAuthTypes').HttpAdapter;
   pkce: import('./OAuthTypes').PKCEAdapter;
   user: UserAdapter;
