@@ -1,6 +1,6 @@
 {
   "name": "@zestic/oauth-core",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Framework-agnostic OAuth authentication library with support for multiple OAuth flows",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
