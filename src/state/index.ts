@@ -3,7 +3,9 @@
  */
 
 export { LoadingManager } from './LoadingManager';
-export type { 
-  LoadingManagerOptions, 
-  CompletedOperationData 
+export { AuthStatusManager } from './AuthStatusManager';
+export type {
+  LoadingManagerOptions,
+  CompletedOperationData
 } from './LoadingManager';
+export type { AuthStatusManagerOptions } from './AuthStatusManager';

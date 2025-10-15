@@ -34,7 +34,7 @@ import {
   FlowError,
   ErrorFactory
 } from '../errors';
-import { LoadingManager } from '../state/LoadingManager';
+import { LoadingManager, AuthStatusManager } from '../state';
 import { TokenScheduler } from '../token';
 
 export class OAuthCore implements OAuthEventEmitter {
@@ -43,9 +43,9 @@ export class OAuthCore implements OAuthEventEmitter {
   private tokenManager: TokenManager;
   private stateValidator: StateValidator;
   private eventEmitter: EventEmitter<OAuthEventMap>;
-  private currentAuthStatus: AuthStatus = 'unauthenticated';
   private loadingManager: LoadingManager;
   private tokenScheduler: TokenScheduler;
+  private authStatusManager: AuthStatusManager;
 
   constructor(
     private config: OAuthConfig,
@@ -68,6 +68,10 @@ export class OAuthCore implements OAuthEventEmitter {
     this.tokenScheduler = new TokenScheduler(this.eventEmitter, {
       minRefreshDelayMs: 1000, // 1 second minimum
       maxRefreshDelayMs: 86400000, // 24 hours maximum
+    });
+    this.authStatusManager = new AuthStatusManager(this.eventEmitter, {
+      emitEvents: true,
+      initialStatus: 'unauthenticated'
     });
 
     this.initializeFlows(flowConfig);
@@ -117,11 +121,11 @@ export class OAuthCore implements OAuthEventEmitter {
 
   // Public getters for state
   get authenticationStatus(): AuthStatus {
-    return this.currentAuthStatus;
+    return this.authStatusManager.status;
   }
 
   get isAuthenticated(): boolean {
-    return this.currentAuthStatus === 'authenticated';
+    return this.authStatusManager.isAuthenticated;
   }
 
   get isLoading(): boolean {
@@ -155,11 +159,7 @@ export class OAuthCore implements OAuthEventEmitter {
 
   // Private helper methods
   private setAuthStatus(status: AuthStatus): void {
-    const previousStatus = this.currentAuthStatus;
-    if (previousStatus !== status) {
-      this.currentAuthStatus = status;
-      this.emit('authStatusChange', status, previousStatus);
-    }
+    this.authStatusManager.setStatus(status);
   }
 
   private startOperation(operation: string, metadata?: Record<string, unknown>): LoadingContext {
@@ -672,5 +672,6 @@ export class OAuthCore implements OAuthEventEmitter {
     this.tokenScheduler.destroy();
     this.loadingManager.destroy();
     this.eventEmitter.removeAllListeners();
+    // AuthStatusManager doesn't need explicit cleanup
   }
 }
