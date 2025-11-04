@@ -260,6 +260,31 @@ export class OAuthCore implements OAuthEventEmitter {
   }
 
   /**
+   * Initialize authentication status from existing stored tokens
+   * This method reads tokens from storage and updates the auth status accordingly
+   * Useful for syncing auth state when tokens exist from previous sessions
+   */
+  async initializeFromStorage(): Promise<void> {
+    try {
+      const accessToken = await this.getAccessToken();
+      if (accessToken) {
+        const isExpired = await this.isTokenExpired();
+        this.setAuthStatus(isExpired ? 'expired' : 'authenticated');
+      } else {
+        this.setAuthStatus('unauthenticated');
+      }
+    } catch (error) {
+      // If there's an error reading from storage, default to unauthenticated
+      this.setAuthStatus('unauthenticated');
+      // Optionally log the error
+      this.emit('authError', {
+        error: new OAuthError('Failed to initialize auth status from storage', 'STORAGE_READ_ERROR', 'validation'),
+        operation: 'initializeFromStorage'
+      });
+    }
+  }
+
+  /**
    * Handle OAuth callback with automatic flow detection
    */
   async handleCallback(params: URLSearchParams | string, explicitFlow?: string): Promise<OAuthResult> {

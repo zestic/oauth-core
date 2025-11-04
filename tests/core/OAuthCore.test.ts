@@ -538,6 +538,70 @@ describe('OAuthCore', () => {
     });
   });
 
+  describe('initializeFromStorage', () => {
+    it('should set authenticated status when valid tokens exist', async () => {
+      // Store access token directly
+      await mockAdapters.storage.setItem('access_token', 'valid-token');
+
+      // Mock isTokenExpired to return false (not expired)
+      const originalIsTokenExpired = oauthCore.isTokenExpired;
+      oauthCore.isTokenExpired = jest.fn().mockResolvedValue(false);
+
+      await oauthCore.initializeFromStorage();
+
+      expect(oauthCore.authenticationStatus).toBe('authenticated');
+
+      // Restore original method
+      oauthCore.isTokenExpired = originalIsTokenExpired;
+    });
+
+    it('should set expired status when expired tokens exist', async () => {
+      // Store access token directly
+      await mockAdapters.storage.setItem('access_token', 'expired-token');
+
+      // Mock isTokenExpired to return true (expired)
+      const originalIsTokenExpired = oauthCore.isTokenExpired;
+      oauthCore.isTokenExpired = jest.fn().mockResolvedValue(true);
+
+      await oauthCore.initializeFromStorage();
+
+      expect(oauthCore.authenticationStatus).toBe('expired');
+
+      // Restore original method
+      oauthCore.isTokenExpired = originalIsTokenExpired;
+    });
+
+    it('should set unauthenticated status when no tokens exist', async () => {
+      // Ensure no tokens exist
+      await mockAdapters.storage.removeItem('access_token');
+
+      await oauthCore.initializeFromStorage();
+
+      expect(oauthCore.authenticationStatus).toBe('unauthenticated');
+    });
+
+    it('should handle storage read errors gracefully', async () => {
+      // Mock getAccessToken to throw error
+      const originalGetAccessToken = oauthCore.getAccessToken;
+      oauthCore.getAccessToken = jest.fn().mockRejectedValue(new Error('Storage read error'));
+
+      // Spy on emit to verify error event
+      const emitSpy = jest.spyOn(oauthCore, 'emit');
+
+      await oauthCore.initializeFromStorage();
+
+      expect(oauthCore.authenticationStatus).toBe('unauthenticated');
+      expect(emitSpy).toHaveBeenCalledWith('authError', {
+        error: expect.any(Object),
+        operation: 'initializeFromStorage'
+      });
+
+      // Restore original method
+      oauthCore.getAccessToken = originalGetAccessToken;
+      emitSpy.mockRestore();
+    });
+  });
+
   describe('OAuthCore coverage improvements', () => {
     it('should cover private initialization methods', () => {
       // Test initializeFlows with null config

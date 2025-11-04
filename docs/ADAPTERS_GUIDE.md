@@ -368,6 +368,88 @@ class FetchGraphQLAdapter implements GraphQLAdapter {
 }
 ```
 
+## Authentication Status Synchronization
+
+### Initializing Auth Status from Storage
+
+The `OAuthCore.initializeFromStorage()` method allows adapters to synchronize authentication state with any existing stored tokens when the OAuth core is first initialized. This is particularly important for:
+
+- **Session persistence**: When users return to the app after closing it
+- **Multiple adapter instances**: Ensuring consistent auth state across different parts of your application
+- **Token validation**: Checking if stored tokens are still valid or expired
+
+#### Usage Pattern
+
+```typescript
+import { OAuthCore } from '@zestic/oauth-core';
+
+// Create OAuth core instance
+const oauth = new OAuthCore(config, adapters);
+
+// Initialize authentication status from stored tokens
+// This will:
+// - Check for existing access tokens in storage
+// - Set auth status to 'authenticated' if valid tokens exist
+// - Set auth status to 'expired' if expired tokens exist
+// - Set auth status to 'unauthenticated' if no tokens exist
+// - Handle storage read errors gracefully
+await oauth.initializeFromStorage();
+
+// Now you can check the authentication status
+if (oauth.isAuthenticated) {
+  console.log('User is already authenticated');
+} else if (oauth.authenticationStatus === 'expired') {
+  console.log('Tokens are expired, may need refresh');
+} else {
+  console.log('User needs to authenticate');
+}
+```
+
+#### Adapter Implementation Example
+
+```typescript
+class ExpoOAuthAdapter {
+  constructor(private config: ExpoOAuthConfig) {
+    // Create adapters
+    const adapters = {
+      storage: new ExpoSecureStoreAdapter(),
+      http: new ExpoHttpAdapter(),
+      pkce: new ExpoPKCEAdapter(),
+    };
+
+    // Initialize OAuth core
+    this.oauthCore = new OAuthCore(config, adapters);
+
+    // Register flow handlers
+    this.oauthCore.registerFlow(new MagicLinkLoginFlowHandler());
+    this.oauthCore.registerFlow(new MagicLinkVerifyFlowHandler());
+
+    // CRITICAL: Initialize auth status from any existing stored tokens
+    // This ensures the adapter knows if the user is already authenticated
+    this.oauthCore.initializeFromStorage();
+  }
+
+  // ... rest of adapter implementation
+}
+```
+
+#### Benefits
+
+1. **Consistent State**: All adapter instances have the same view of authentication status
+2. **Performance**: Avoid unnecessary re-authentication flows
+3. **User Experience**: Seamless experience when returning to the app
+4. **Error Resilience**: Graceful handling of storage issues
+5. **Event Integration**: Emits appropriate events for auth status changes
+
+#### Error Handling
+
+The method handles storage read errors gracefully:
+- If storage access fails, auth status defaults to `'unauthenticated'`
+- An `'authError'` event is emitted with operation `'initializeFromStorage'`
+- The application continues to function normally
+
+This ensures your app remains stable even if there are issues with token storage.
+
 ## Putting It All Together
 
 ```typescript
@@ -400,6 +482,10 @@ const oauth = new OAuthCore(config, {
   user,     // Optional - needed for user management features
   graphql   // Optional - needed for GraphQL-based flows
 });
+
+// Initialize authentication status from any existing stored tokens
+// This is important for adapters to sync auth state when tokens exist from previous sessions
+await oauth.initializeFromStorage();
 
 // Use with metadata tracking (Phase 7 feature)
 const result = await oauth.handleCallback(params);
